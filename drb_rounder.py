@@ -41,14 +41,18 @@ TK: Currently doesn't put commas back in the numbers."""
         tmp = tmp[:-1]
     
     # Perform floating point rounding
-    rounded = round_decimal(Decimal(tmp))
+    # Both of the following are equivalent 
+    #rounded = round_decimal(Decimal(tmp))
+    rounded = round_float(float(tmp))
+
     if round_counts and 0 <= rounded <= 7:
         rounded = round_counts(rounded)
     
     rounded_str = str(rounded)
     if "." not in s and rounded_str.endswith(".0"):
         rounded_str = rounded_str[0:-2]
-    print("tmp=",tmp,"Decimal(tmp)=",Decimal(tmp),"rounded_str=",rounded_str)
+    print("tmp={} Decimal(tmp)={} rounded={} rounded_str={}".format(
+            tmp,Decimal(tmp), rounded,rounded_str))
 
     # Put it back together and return
     ret = leading_text + rounded_str + trailing_text

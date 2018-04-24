@@ -4,10 +4,19 @@ import py.test
 from drb_rounder import * 
 import re
 
+def test_round_str():
+    assert round_str("1234")  == "1234"
+    assert round_str("12345") == "12340" # ROUND_HALF_EVEN
+    assert round_str("12346") == "12350" # ROUND_HALF_EVEN
+    assert round_str("123450") == "123400" # ROUND_HALF_EVEN
+    assert round_str("123455") == "123500" # ROUND_HALF_EVEN
+    assert round_str("123465") == "123500" # ROUND_HALF_EVEN
+
 def test_str_needs_rounding():
     assert str_needs_rounding("1") == False
     assert str_needs_rounding("1,456") == False
     assert str_needs_rounding("123,456") == True
+    assert str_needs_rounding("123456") == True
 
 
 def test_round_float():

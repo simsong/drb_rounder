@@ -21,6 +21,10 @@ def round_float(f):
 def round_decimal(d):
     return float( format( d,'.4g' ))
 
+def str_to_float(s):
+    """Convert a string to a float"""
+    return float( s.replace(",",""))
+
 def round_str(s,add_spaces=True,round_counts=False):
     """Take a string, convert it to a number, and round it. Add spaces if
 required. If it is not a number, don't round. Returns as a string.
@@ -47,12 +51,24 @@ TK: Currently doesn't put commas back in the numbers."""
 
     if round_counts and 0 <= rounded <= 7:
         rounded = round_counts(rounded)
-    
-    rounded_str = str(rounded)
-    if "." not in s and rounded_str.endswith(".0"):
-        rounded_str = rounded_str[0:-2]
-    print("tmp={} Decimal(tmp)={} rounded={} rounded_str={}".format(
-            tmp,Decimal(tmp), rounded,rounded_str))
+
+    # If the original string had commas, add them back
+    # Otherwise just change the rounded number to a string
+    if "," in s:
+        rounded_str = "{:,}".format(rounded)
+    else:
+        rounded_str = "{:}".format(rounded)
+
+    # If the original string had no ".", make sure that the new string has no "."
+    if ("." not in s) and ("." in rounded_str):
+        rounded_str = rounded_str[0: rounded_str.find(".")]
+        
+    # If the original string ended in ".", make sure that the new string ends in "."
+    if (s.endswith(".")) and (not rounded_str.endswith(".")) and ("." in rounded_str):
+        rounded_str = rounded_str[0: rounded_str.find(".")+1]
+
+    print("tmp={} Decimal(tmp)={} rounded={} rounded_str={} leading_text={} training_text={}".format(
+            tmp,Decimal(tmp), rounded,rounded_str, leading_text, trailing_text))
 
     # Put it back together and return
     ret = leading_text + rounded_str + trailing_text
@@ -60,14 +76,19 @@ TK: Currently doesn't put commas back in the numbers."""
     if add_spaces:
         # Add missing spaces
         ret += " " * (len(s) - len(ret))
+        print("s={} ret={}".format(s,ret))
         assert len(s) == len(ret)
     return ret
         
-def str_needs_rounding(s):
-    """Returns true if a string needs rounding"""
+def str_needs_rounding(s,return_rounded = False):
+    """Check to see if s needs rounding. If so, return True, but if return_rounded is true, return the rounded values."""
     s = s.replace(",","")       # remove commas
-    print("s='{}' round_str(s)='{}'".format(s,round_str(s)))
-    return s != round_str(s) 
+    rounded_str = round_str(s)
+    if s == rounded_str:
+        return False
+    if return_rounded:
+        return rounded_str
+    return True
 
     
 ################################################################
@@ -146,6 +167,10 @@ HTML_HEADER="""<html>
   color: red;
   background-color: yellow;
 }
+.after {
+  color: black;
+  background-color: LightGreen;
+}
 </style>
 </head>
 <body>
@@ -162,33 +187,57 @@ def process_logfile(fname):
     # Make sure that our intended output files do not exist
     (name,ext) = os.path.splitext(fname)
     fname_rounded = name + "_rounded" + ext
+    frounded = open(fname_rounded, "w")
     
     # before - highlight items that need rounding
     fname_before  = name + "_0.html"
-    fbefore = open(fname_before,"w")
+    fbefore = open(fname_before, "w")
     fbefore.write(HTML_HEADER)
 
     # after - show it rounded
     fname_after  = name + "_1.html"
-    fafter = open(fname_after,"w")
+    fafter = open(fname_after, "w")
     fafter.write(HTML_HEADER)
 
     with open(fname) as fin:
         for line in fin:
             pos = 0             # where we are on the line
+            rounded = []
             before = []
+            after  = []
             spans = numbers_in_line(line)
             for span in spans:
-                num = float(line[ span[0] : span[1] ])
-                
-                before.append( line[ pos : span[0]] ) # part of line before span in question
-                before.append("<span class='before'>")
-                before.append( line[ span[0] : span[1]] ) #  span in question
-                before.append("</span>")
-                pos = span[1]
+                rounded_str = str_needs_rounding(line[ span[0] : span[1] ], return_rounded=True)
+                if rounded_str:
+                    before.append( line[ pos : span[0]] ) # part of line before span in question
+                    before.append("<span class='before'>")
+                    before.append( line[ span[0] : span[1]] ) #  span in question
+                    before.append("</span>")
+
+                    after.append( line[ pos : span[0]] ) # part of line after span in question
+                    after.append("<span class='after'>")
+                    after.append( rounded_str ) #  span in question
+                    after.append("</span>")
+
+                    rounded.append( line[ pos : span[0]] )
+                    rounded.append( rounded_str )
+
+                    pos = span[1]
+                    
+            rounded.append( line[ pos: ] ) # get end of line (or entire line, if not spans)
             before.append( line[ pos: ] ) # get end of line (or entire line, if not spans)
+            after.append( line[ pos: ] ) # get end of line (or entire line, if not spans)
+
+            frounded.write("".join(rounded))
             fbefore.write("".join(before))
+            fafter.write("".join(after))
+            
     fbefore.write(HTML_FOOTER)
+    fafter.write(HTML_FOOTER)
+
+    frounded.close()
+    fbefore.close()
+    fafter.close()
 
 if __name__=="__main__":
     import argparse

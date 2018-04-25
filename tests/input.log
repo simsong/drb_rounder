@@ -1,0 +1,22 @@
+This file demonstrates the DRB Logfile Rounding Program.
+
+The input file can be free-format. All numbers are rounded to four significant places.
+
+For example, there are not 365 days in most years, but 366 days in a
+leap year. On average, there are 365.25 days in a year.  Likewise,
+there are 31,536,000 seconds in a normal year, but 31,622,400 seconds
+in a leap year.
+
+The Logfile Rounding Program is written in Python 3.6. To use it to
+round the file input.log, try this command:
+
+   $ python3 drb_rounder input.log
+   Output in input_rounded.log
+   Pre-rounded text in input_0.html
+   Rounded text in input_1.html
+
+
+
+one year, there are actually
+365.25 (365 and a quarter) days in a year.
+

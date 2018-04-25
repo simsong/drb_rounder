@@ -96,7 +96,6 @@ def str_needs_rounding(s,return_rounded = False):
 ################################################################
 
 number_re = re.compile(r"\d{1,3}((,\d\d\d)|(\d\d\d))*([.]\d*)?")
-
 def find_next_number(line,pos=0):
     """Find the next number in line, starting at position pos.
     Returns number starting position and length as (start,end)
@@ -118,19 +117,30 @@ def numbers_in_line(line):
         pos = loc[1]
     return ret
     
-def new_filename(oldfilename):
-    # Compute the new filename, which has _rounded before the extension
-    (basename,ext) = os.path.splitext(oldfilename)
-    return basename+"_rounded" + ext
-    
+################################################################
+### filename code
+################################################################
+
+def safe_open(filename,mode,return_none=False):
+    """Like open, but if filename exists and mode is 'w', produce an error"""
+    if 'w' in mode and os.path.exists(filename):
+        print("***************************************")
+        print("OUTPUT FILE EXISTS: {}".format(filename))
+        print("Please delete or rename file and restart program.")
+        if return_none:
+            return None
+        exit(1)
+    return open(filename,mode)
+
 
 def process_csvfile(infilename):
     """Process a tab or comma-delimited file and create a rounded file"""
-    outfilename = new_filename(infilename)
+    (basename,ext) = os.path.splitext(oldfilename)
+    outfilename = basename+"_rounded"+ext
     print("{} --> {}".format(infilename,outfilename))
     line_number = 0
     with open(infilename,"rU") as infile:
-        with open(outfilename,"w") as outfile:
+        with safe_open(outfilename,"w") as outfile:
             for line in infile:
                 stripped_line = line.rstrip()    # remove EOL
                 eol_len = len(line) - len(stripped_line)
@@ -187,17 +197,29 @@ def process_logfile(fname):
     # Make sure that our intended output files do not exist
     (name,ext) = os.path.splitext(fname)
     fname_rounded = name + "_rounded" + ext
-    frounded = open(fname_rounded, "w")
+    frounded = safe_open(fname_rounded, "w", return_none=True)
     
     # before - highlight items that need rounding
     fname_before  = name + "_0.html"
-    fbefore = open(fname_before, "w")
-    fbefore.write(HTML_HEADER)
+    fbefore = safe_open(fname_before, "w", return_none=True)
 
     # after - show it rounded
     fname_after  = name + "_1.html"
-    fafter = open(fname_after, "w")
+    fafter = safe_open(fname_after, "w", return_none=True)
+
+    if (not frounded) or (not fbefore) or (not fafter):
+        print("PROGRAM HALTS")
+        exit(1)
+
+    fbefore.write(HTML_HEADER)
     fafter.write(HTML_HEADER)
+
+    # Note that the output was rounded
+
+    frounded.write("*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***\n")
+    fbefore.write("<p><b>*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***</b></p>\n")
+    fafter.write("<p><b>*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***</b></p>\n")
+
 
     with open(fname) as fin:
         for line in fin:
@@ -222,15 +244,16 @@ def process_logfile(fname):
                     rounded.append( line[ pos : span[0]] )
                     rounded.append( rounded_str )
 
-                    pos = span[1]
+                    pos = span[1] # next character on line to process is span[1]
                     
-            rounded.append( line[ pos: ] ) # get end of line (or entire line, if not spans)
-            before.append( line[ pos: ] ) # get end of line (or entire line, if not spans)
-            after.append( line[ pos: ] ) # get end of line (or entire line, if not spans)
+            # get end of line (or entire line, if not spans)
+            before.append( line[ pos: ] )  
+            after.append( line[ pos: ] ) 
+            rounded.append( line[ pos: ] ) 
 
-            frounded.write("".join(rounded))
             fbefore.write("".join(before))
             fafter.write("".join(after))
+            frounded.write("".join(rounded))
             
     fbefore.write(HTML_FOOTER)
     fafter.write(HTML_FOOTER)

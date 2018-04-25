@@ -13,6 +13,7 @@ def test_round_str():
     assert round_str("123465") == "123500" # ROUND_HALF_EVEN
 
 def test_str_needs_rounding():
+    assert str_needs_rounding("1.00") == False
     assert str_needs_rounding("1") == False
     assert str_needs_rounding("1,456") == False
     assert str_needs_rounding("123,456") == True
@@ -22,6 +23,7 @@ def test_str_needs_rounding():
 def test_round_float():
     assert round_float(1.0)    == 1.0
     assert round_float(1.2)    == 1.2
+    assert round_float(1.20)   == 1.20
     assert round_float(1.23)   == 1.23
     assert round_float(1.234)  == 1.234
     assert round_float(1.2345) == 1.234

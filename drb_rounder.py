@@ -16,10 +16,16 @@ def nearest(n, range):
 def round_counts(n):
     """Implements the DRB rounding rules for counts. Note that we return a string, 
     so that we can report N < 15"""
-    if n < 15: return "15"
-    if d==0: return d
-    if d>=1 and d<=7: return 4
-    return d
+    assert n == math.floor(n)    # make sure it is an integer!
+    assert n >= 0
+    if 0 <= n < 15: return "< 15"
+    if 15 <= n <= 99: return str(nearest( n, 10))
+    if 100 <= n <= 999: return str(nearest( n, 50))
+    if 1000 <= n <= 9999: return str(nearest( n, 100))
+    if 10000 <= n <= 99999: return str(nearest( n, 500))
+    if 100000 <= n <= 999999: return str(nearest( n, 1000))
+    return round_decimal( n )
+
 
 prec4_rounder = Context(prec=4, rounding=ROUND_HALF_EVEN)
 def round_float(f):

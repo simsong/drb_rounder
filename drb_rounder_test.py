@@ -13,6 +13,13 @@ def test_nearest():
     assert nearest(60,10) == 60
     assert nearest(61,10) == 60
     
+def test_round_counts():
+    assert round_counts(1) == "< 15"
+    assert round_counts(14) == "< 15"
+    assert round_counts(15) == "20"
+    assert round_counts(20) == "20"
+    assert round_counts(24) == "20"
+    
 
 def test_round_str():
     assert round_str("1234")  == "1234"

@@ -4,6 +4,16 @@ import py.test
 from drb_rounder import * 
 import re
 
+def test_nearest():
+    assert nearest(80,100) == 100
+    assert nearest(120,100) == 100
+    assert nearest(51,100) == 100
+    assert nearest(51,10) == 50
+    assert nearest(56,10) == 60
+    assert nearest(60,10) == 60
+    assert nearest(61,10) == 60
+    
+
 def test_round_str():
     assert round_str("1234")  == "1234"
     assert round_str("12345") == "12340" # ROUND_HALF_EVEN

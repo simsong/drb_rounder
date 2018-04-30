@@ -3,13 +3,20 @@
 from decimal import Decimal,ROUND_HALF_EVEN,Context
 import os
 import re
+import math
 
 LOGFILE_ROUNDER_EXTENSIONS = ['.log','.txt','.sas']
 
 ################################################################
-### Rounding codep
+### Rounding code
 ################################################################
-def round_counts(d):
+def nearest(n, range):
+    return math.floor((n / range) + 0.5) * range
+
+def round_counts(n):
+    """Implements the DRB rounding rules for counts. Note that we return a string, 
+    so that we can report N < 15"""
+    if n < 15: return "15"
     if d==0: return d
     if d>=1 and d<=7: return 4
     return d

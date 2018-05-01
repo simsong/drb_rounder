@@ -1,3 +1,8 @@
+Round to less than fifteen: 5
+Round to fifty: 45
+Round to an eight: 0.1250125
+
+
 Trees   Cats    Dogs
 0       1       1
 10.1    10.2    10.3

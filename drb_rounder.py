@@ -10,6 +10,9 @@ import os
 import re
 import math
 
+ROUND4_METHOD="round4"
+COUNTS_METHOD="counts"
+
 ################################################################
 ### Rounding code
 ################################################################
@@ -20,9 +23,10 @@ def nearest(n, number):
 def round_counts(n):
     """Implements the DRB rounding rules for counts. Note that we return a string, 
     so that we can report N < 15"""
-    assert n == math.floor(n)    # make sure it is an integer!
+    n = int(n)
+    assert n == math.floor(n)    # make sure it is an integer; shouldn't be needed with above
     assert n >= 0
-    if      0 <= n <      15: return "< 15"
+    if      0 <= n <      15: return "<15"
     if     15 <= n <=     99: return str(nearest( n,   10))
     if    100 <= n <=    999: return str(nearest( n,   50))
     if   1000 <= n <=   9999: return str(nearest( n,  100))
@@ -30,19 +34,11 @@ def round_counts(n):
     if 100000 <= n <= 999999: return str(nearest( n, 1000))
     return round_decimal( n )
 
-
 prec4_rounder = Context(prec=4, rounding=ROUND_HALF_EVEN)
-def round_float(f):
+def round4_float(f):
     return float(str(prec4_rounder.create_decimal(f)))
 
-def round_decimal(d):
-    return float( format( d,'.4g' ))
-
-def str_to_float(s):
-    """Convert a string to a float"""
-    return float( s.replace(",",""))
-
-def round_str(s,add_spaces=True,round_counts=False):
+def round4_str(s,add_spaces=True,round_counts=False):
     """Take a string, convert it to a number, and round it. Add spaces if
     required. If it is not a number, don't round. Puts commas back in the
     numbers. Returns as a string.
@@ -64,8 +60,7 @@ def round_str(s,add_spaces=True,round_counts=False):
     
     # Perform floating point rounding
     # Both of the following are equivalent 
-    #rounded = round_decimal(Decimal(tmp))
-    rounded = round_float(float(tmp))
+    rounded = round4_float(float(tmp))
 
     if round_counts and 0 <= rounded <= 7:
         rounded = round_counts(rounded)
@@ -85,31 +80,41 @@ def round_str(s,add_spaces=True,round_counts=False):
     if (s.endswith(".")) and (not rounded_str.endswith(".")) and ("." in rounded_str):
         rounded_str = rounded_str[0: rounded_str.find(".")+1]
 
-    print("tmp={} Decimal(tmp)={} rounded={} rounded_str={} leading_text={} training_text={}".format(
-            tmp,Decimal(tmp), rounded,rounded_str, leading_text, trailing_text))
-
     # Put it back together and return
     ret = leading_text + rounded_str + trailing_text
 
     if add_spaces:
         # Add missing spaces
         ret += " " * (len(s) - len(ret))
-        print("s={} ret={}".format(s,ret))
         assert len(s) == len(ret)
     return ret
         
-def str_needs_rounding(s,return_rounded = False):
-    """Check to see if s needs rounding. If so, return True, but if return_rounded is true, 
-    return the rounded values instead. I don't like a function that can return True/False or a string,
-    but there you have it."""
-    s = s.replace(",","")       # remove commas
-    rounded_str = round_str(s)
-    if s == rounded_str:
-        return False
-    if return_rounded:
-        return rounded_str
-    return True
-
+ORIGINAL='original'
+ORIGINAL_WITHOUT_COMMAS='original_without_commas'
+ORIGINAL_HAS_COMMAS='original_has_commas'
+ROUNDING_METHOD='rounding_method'
+ROUNDED_WITHOUT_COMMAS='rounded_without_commas'
+ROUNDED='rounded'
+NEEDS_ROUNDING='needs_rounding'
+def analyze_for_rounding(original):
+    """Analyze a string for rounding and return a dictionary including original string, rounded string, and rounding method."""
+    ret = {}
+    ret[ORIGINAL]                = original = str(original) # be sure it is a string
+    ret[ORIGINAL_HAS_COMMAS]     = ',' in original
+    ret[ORIGINAL_WITHOUT_COMMAS] = original.replace(",","") # remove commas
+    if "." in ret[ORIGINAL_WITHOUT_COMMAS]:
+        ret[ROUNDING_METHOD] = ROUND4_METHOD
+        ret[ROUNDED_WITHOUT_COMMAS] = round4_str(ret[ORIGINAL_WITHOUT_COMMAS])
+    else:
+        ret[ROUNDING_METHOD] = COUNTS_METHOD
+        ret[ROUNDED_WITHOUT_COMMAS] = round_counts(ret[ORIGINAL_WITHOUT_COMMAS])
+    # 
+    if ret[ORIGINAL_HAS_COMMAS]:
+        ret[ROUNDED] = "{:,}".format(float(ret['rounded_without_commas']))
+    else:
+        ret[ROUNDED] = ret[ROUNDED_WITHOUT_COMMAS]
+    ret[NEEDS_ROUNDING]    = ret[ORIGINAL_WITHOUT_COMMAS] != ret[ROUNDED_WITHOUT_COMMAS]
+    return ret
     
 ################################################################
 ###
@@ -144,9 +149,9 @@ def numbers_in_line(line):
         pos = loc[1]
     return ret
     
-def safe_open(filename,mode,return_none=False):
+def safe_open(filename,mode,return_none=False, zap=False):
     """Like open, but if filename exists and mode is 'w', produce an error"""
-    if 'w' in mode and os.path.exists(filename):
+    if 'w' in mode and os.path.exists(filename) and not zap:
         print("***************************************")
         print("OUTPUT FILE EXISTS: {}".format(filename))
         print("Please delete or rename file and restart program.")
@@ -160,36 +165,44 @@ class DRBRounder:
     HTML_HEADER="""<html>
     <head>
     <style>
-    .bcount {
-      color: red;
-      background-color: yellow;
-    }
-    .bfloat {
-      color: red;
-      background-color: yellow;
-      border-radius: 25px;
-      border: 2px solid black;
-      padding: 1px; 
-    }
-    .gcount {
-      color: black;
-      background-color: LightGreen;
-    }
-    .gfloat {
-      color: black;
-      background-color: LightGreen;
-      border-radius: 25px;
-      border: 2px solid black;
-      padding: 1px; 
+    table.no-spacing {
+      border-spacing:0; /* Removes the cell spacing via CSS */
+      border-collapse: collapse;  /* Optional - if you don't want to have double border where cells touch */
     }
 
-    .gcount {
+    .linenumber {
       color: black;
+      background-color: LightGray;
+    }
+    .bcount {
+      color: DarkRed;
+      background-color: yellow;
+      font-weight: bold;
+    }
+    .bfloat {
+      color: DarkBlue;
+      background-color: yellow;
+      font-weight: bold;
+    }
+    .rcount {
+      color: DarkRed;
       background-color: LightGreen;
+      font-weight: bold;
+    }
+    .rfloat {
+      color: DarkBlue;
+      background-color: LightGreen;
+      font-weight: bold;
     }
     </style>
     </head>
     <body>
+    <table class='no-spacing'>
+    <tr><th class='linenumber'>&nbsp;Line&nbsp;&nbsp;    </th> <th class='bcount'> Count Needing Rounding </th>
+        <th class='rcount'> Rounded Count </th> </tr>
+    <tr><th class='linenumber'>&nbsp;Number&nbsp;        </th> <th class='bfloat'> Float Needing Rounding </th>
+        <th class='rfloat'> Rounded Float </th></tr>
+    </table>
     <pre>
     """
 
@@ -238,66 +251,73 @@ class DRBRounder:
         # Make sure that our intended output files do not exist
         (name,ext) = os.path.splitext(self.fname)
         fname_rounded = name + "_rounded" + ext
-        frounded = safe_open(fname_rounded, "w", return_none=True)
+        frounded = safe_open(fname_rounded, "w", return_none=True, zap=args.zap)
 
         # before - highlight items that need rounding
         fname_before  = name + "_0.html"
-        fbefore = safe_open(fname_before, "w", return_none=True)
+        fbefore = safe_open(fname_before, "w", return_none=True, zap=args.zap)
 
         # after - show it rounded
         fname_after  = name + "_1.html"
-        fafter = safe_open(fname_after, "w", return_none=True)
+        fafter = safe_open(fname_after, "w", return_none=True, zap=args.zap)
 
         if (not frounded) or (not fbefore) or (not fafter):
             print("PROGRAM HALTS")
             exit(1)
 
-        fbefore.write(HTML_HEADER)
-        fafter.write(HTML_HEADER)
+        fbefore.write(self.HTML_HEADER)
+        fafter.write(self.HTML_HEADER)
 
         # Note that the output was rounded
 
-        frounded.write("*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***\n")
-        fbefore.write("<p><b>*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***</b></p>\n")
-        fafter.write("<p><b>*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***</b></p>\n")
+        ROUNDING_RULES_MESSAGE = "*** DRB ROUNDING RULES HAVE BEEN APPLIED ***"
 
+        frounded.write(ROUNDING_RULES_MESSAGE + "\n")
+        fbefore.write("<p><b>" + ROUNDING_RULES_MESSAGE + "</b></p>\n")
+        fafter.write("<p><b>"  + ROUNDING_RULES_MESSAGE + "</b></p>\n")
 
         with open(self.fname) as fin:
+            linenumber = 0
             for line in fin:
+                linenumber += 1
                 pos = 0             # where we are on the line
-                rounded = []
-                before = []
-                after  = []
+
+                num = "{:6} ".format(linenumber).replace(" ","&nbsp")
+                for what in [fbefore,fafter]:
+                    what.write("<span class='linenumber'>")
+                    what.write(num)
+                    what.write("</span>")
+
                 spans = numbers_in_line(line)
                 for span in spans:
-                    rounded_str = str_needs_rounding(line[ span[0] : span[1] ], return_rounded=True)
-                    if rounded_str:
-                        before.append( line[ pos : span[0]] ) # part of line before span in question
-                        before.append("<span class='before'>")
-                        before.append( line[ span[0] : span[1]] ) #  span in question
-                        before.append("</span>")
+                    ret = analyze_for_rounding(line[ span[0] : span[1] ])
+                    if ret[NEEDS_ROUNDING]:
+                        if ret[ROUNDING_METHOD]==ROUND4_METHOD:
+                            kind='float'
+                        else:
+                            kind='count'
+                        fbefore.write( line[ pos : span[0]] ) # part of line before span in question
+                        fbefore.write("<span class='b{}'>".format(kind))
+                        fbefore.write( line[ span[0] : span[1]] ) #  span in question
+                        fbefore.write("</span>")
 
-                        after.append( line[ pos : span[0]] ) # part of line after span in question
-                        after.append("<span class='after'>")
-                        after.append( rounded_str ) #  span in question
-                        after.append("</span>")
+                        fafter.write( line[ pos : span[0]] ) # part of line after span in question
+                        fafter.write("<span class='r{}'>".format(kind))
+                        fafter.write( ret['rounded'] ) #  span in question
+                        fafter.write("</span>")
 
-                        rounded.append( line[ pos : span[0]] )
-                        rounded.append( rounded_str )
+                        frounded.write( line[ pos : span[0]] )
+                        frounded.write( ret['rounded'] )
 
                         pos = span[1] # next character on line to process is span[1]
 
                 # get end of line (or entire line, if not spans)
-                before.append( line[ pos: ] )  
-                after.append( line[ pos: ] ) 
-                rounded.append( line[ pos: ] ) 
+                fbefore.write( line[ pos: ] )  
+                fafter.write( line[ pos: ] ) 
+                frounded.write( line[ pos: ] ) 
 
-                fbefore.write("".join(before))
-                fafter.write("".join(after))
-                frounded.write("".join(rounded))
-
-        fbefore.write(HTML_FOOTER)
-        fafter.write(HTML_FOOTER)
+        fbefore.write(self.HTML_FOOTER)
+        fafter.write(self.HTML_FOOTER)
 
         frounded.close()
         fbefore.close()
@@ -318,7 +338,7 @@ class DRBRounder:
             self.process_xlsx()
         elif ext in ['.csv','.tsv']:
             self.process_csvfile()
-        elif ext in LOGFILE_ROUNDER_EXTENSIONS:
+        elif ext in self.LOGFILE_ROUNDER_EXTENSIONS:
             self.process_logfile()
         else:
             print("Don't know how to process '{}' type file in: {}".format(ext,fname),out=sys.stderr)
@@ -330,8 +350,9 @@ if __name__=="__main__":
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('files', type=str, nargs='+', help='File[s] to round')
     parser.add_argument("--tab",action="store_true",help="Assume CSV is tab delimited")
-    parser.add_argument("--log",help="Invoke logfile rounder. This is the default for files ending in {}".format(" ".join(LOGFILE_ROUNDER_EXTENSIONS)))
+    parser.add_argument("--log",help="Invoke logfile rounder. This is the default for files ending in {}".format(" ".join(DRBRounder.LOGFILE_ROUNDER_EXTENSIONS)))
     parser.add_argument("--counts",help="Apply rounding rules for small counts: 0-7 rounds to 4",action='store_true')
+    parser.add_argument("--zap",help="overwrite output files",action='store_true')
     args = parser.parse_args()
     args.delimiter = "\t"       # default delimiter
     for fname in args.files:

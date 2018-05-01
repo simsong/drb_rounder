@@ -16,17 +16,21 @@ COUNTS_METHOD="counts"
 ################################################################
 ### Rounding code
 ################################################################
+def all_spaces(s):
+    return all(ch==' ' for ch in s)
+
 def nearest(n, number):
     """Returns n to the nearest number"""
     return math.floor((n / number) + 0.5) * number
 
+LESS_THAN_15 = "<15"
 def round_counts(n):
     """Implements the DRB rounding rules for counts. Note that we return a string, 
     so that we can report N < 15"""
     n = int(n)
     assert n == math.floor(n)    # make sure it is an integer; shouldn't be needed with above
     assert n >= 0
-    if      0 <= n <      15: return "<15"
+    if      0 <= n <      15: return LESS_THAN_15
     if     15 <= n <=     99: return str(nearest( n,   10))
     if    100 <= n <=    999: return str(nearest( n,   50))
     if   1000 <= n <=   9999: return str(nearest( n,  100))
@@ -170,9 +174,16 @@ class DRBRounder:
       border-collapse: collapse;  /* Optional - if you don't want to have double border where cells touch */
     }
 
-    .linenumber {
+    #line_numbers {
       color: black;
       background-color: LightGray;
+      margin-right: 10px;
+      text-align: right;
+      float:left;
+    }
+    #content {
+      margin-right: 10px;
+      float:left;
     }
     .bcount {
       color: DarkRed;
@@ -198,17 +209,9 @@ class DRBRounder:
     </head>
     <body>
     <table class='no-spacing'>
-    <tr><th class='linenumber'>&nbsp;Line&nbsp;&nbsp;    </th> <th class='bcount'> Count Needing Rounding </th>
-        <th class='rcount'> Rounded Count </th> </tr>
-    <tr><th class='linenumber'>&nbsp;Number&nbsp;        </th> <th class='bfloat'> Float Needing Rounding </th>
-        <th class='rfloat'> Rounded Float </th></tr>
+    <tr><th class='bcount'> <tt>Count Needing Rounding </tt></th> <th class='rcount'> <tt>Rounded Count </tt></th></tr>
+    <tr><th class='bfloat'> <tt>Float Needing Rounding </tt></th> <th class='rfloat'> <tt>Rounded Float </tt></th></tr>
     </table>
-    <pre>
-    """
-
-    HTML_FOOTER="""</pre>
-    </body>
-    </html>
     """
     def process_csvfile(self):
         """Process a tab or comma-delimited file and create a rounded file"""
@@ -270,54 +273,62 @@ class DRBRounder:
 
         # Note that the output was rounded
 
-        ROUNDING_RULES_MESSAGE = "*** DRB ROUNDING RULES HAVE BEEN APPLIED ***"
+        ROUNDING_RULES_MESSAGE = "*** DRB ROUNDING RULES HAVE {}BEEN APPLIED ***"
 
         frounded.write(ROUNDING_RULES_MESSAGE + "\n")
-        fbefore.write("<p><b>" + ROUNDING_RULES_MESSAGE + "</b></p>\n")
-        fafter.write("<p><b>"  + ROUNDING_RULES_MESSAGE + "</b></p>\n")
+        fbefore.write("<p><b>" + ROUNDING_RULES_MESSAGE.format("NOT ") + "</b></p>\n")
+        fafter.write("<p><b>"  + ROUNDING_RULES_MESSAGE.format("")     + "</b></p>\n")
 
+        # Count the number of lines
+        linecount = open(self.fname).read().count("\n")
+
+        # Add the rounding rules
+        for what in [fbefore,fafter]:
+            what.write("<div id='line_numbers'>\n<pre>\n")
+            what.write("".join(["{:}\n".format(line_number) for line_number in range(1,linecount+1)]))
+            what.write("</pre>\n</div><div id='content'>\n<pre>\n")
+        
         with open(self.fname) as fin:
-            linenumber = 0
             for line in fin:
-                linenumber += 1
                 pos = 0             # where we are on the line
-
-                num = "{:6} ".format(linenumber).replace(" ","&nbsp")
-                for what in [fbefore,fafter]:
-                    what.write("<span class='linenumber'>")
-                    what.write(num)
-                    what.write("</span>")
 
                 spans = numbers_in_line(line)
                 for span in spans:
-                    ret = analyze_for_rounding(line[ span[0] : span[1] ])
+                    (col0,col1) = (span[0], span[1]) # the columns where the number appears
+                    ret = analyze_for_rounding(line[ col0 : col1 ])
                     if ret[NEEDS_ROUNDING]:
                         if ret[ROUNDING_METHOD]==ROUND4_METHOD:
                             kind='float'
                         else:
                             kind='count'
-                        fbefore.write( line[ pos : span[0]] ) # part of line before span in question
+                            # If we have replaced with LESS_THAN_15, see if we can grab a few more spaces...
+                            if ret[ROUNDED] == LESS_THAN_15:
+                                extra_spaces = len(LESS_THAN_15) - len(ret[ORIGINAL])
+                                if all_spaces( line[col1 : col1 + extra_spaces] ):
+                                    col1 = col1 + extra_spaces
+
+                        fbefore.write( line[ pos : col0] ) # part of line before span in question
                         fbefore.write("<span class='b{}'>".format(kind))
-                        fbefore.write( line[ span[0] : span[1]] ) #  span in question
+                        fbefore.write( line[ col0 : col1] ) #  span in question
                         fbefore.write("</span>")
 
-                        fafter.write( line[ pos : span[0]] ) # part of line after span in question
+                        fafter.write( line[ pos : col0] ) # part of line after span in question
                         fafter.write("<span class='r{}'>".format(kind))
                         fafter.write( ret['rounded'] ) #  span in question
                         fafter.write("</span>")
 
-                        frounded.write( line[ pos : span[0]] )
+                        frounded.write( line[ pos : col0] )
                         frounded.write( ret['rounded'] )
 
-                        pos = span[1] # next character on line to process is span[1]
+                        pos = col1 # next character on line to process is col1
 
                 # get end of line (or entire line, if not spans)
                 fbefore.write( line[ pos: ] )  
                 fafter.write( line[ pos: ] ) 
                 frounded.write( line[ pos: ] ) 
 
-        fbefore.write(self.HTML_FOOTER)
-        fafter.write(self.HTML_FOOTER)
+        for what in [fbefore,fafter]:
+            what.write("</div></body></html>\n")
 
         frounded.close()
         fbefore.close()

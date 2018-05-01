@@ -1,28 +1,32 @@
 #!/usr/bin/env python36
+#
+# Census DRB Rounder
+# Implements the rounding rules of the RDCs.
+# Includes both code that can be imported into other programs, as well
+# as a program that will round input files.
 
 from decimal import Decimal,ROUND_HALF_EVEN,Context
 import os
 import re
 import math
 
-LOGFILE_ROUNDER_EXTENSIONS = ['.log','.txt','.sas']
-
 ################################################################
 ### Rounding code
 ################################################################
-def nearest(n, range):
-    return math.floor((n / range) + 0.5) * range
+def nearest(n, number):
+    """Returns n to the nearest number"""
+    return math.floor((n / number) + 0.5) * number
 
 def round_counts(n):
     """Implements the DRB rounding rules for counts. Note that we return a string, 
     so that we can report N < 15"""
     assert n == math.floor(n)    # make sure it is an integer!
     assert n >= 0
-    if 0 <= n < 15: return "< 15"
-    if 15 <= n <= 99: return str(nearest( n, 10))
-    if 100 <= n <= 999: return str(nearest( n, 50))
-    if 1000 <= n <= 9999: return str(nearest( n, 100))
-    if 10000 <= n <= 99999: return str(nearest( n, 500))
+    if      0 <= n <      15: return "< 15"
+    if     15 <= n <=     99: return str(nearest( n,   10))
+    if    100 <= n <=    999: return str(nearest( n,   50))
+    if   1000 <= n <=   9999: return str(nearest( n,  100))
+    if  10000 <= n <=  99999: return str(nearest( n,  500))
     if 100000 <= n <= 999999: return str(nearest( n, 1000))
     return round_decimal( n )
 
@@ -40,8 +44,9 @@ def str_to_float(s):
 
 def round_str(s,add_spaces=True,round_counts=False):
     """Take a string, convert it to a number, and round it. Add spaces if
-required. If it is not a number, don't round. Returns as a string.
-TK: Currently doesn't put commas back in the numbers."""
+    required. If it is not a number, don't round. Puts commas back in the
+    numbers. Returns as a string.
+    """
     tmp = s
 
     # Remove the non-digits
@@ -94,7 +99,9 @@ TK: Currently doesn't put commas back in the numbers."""
     return ret
         
 def str_needs_rounding(s,return_rounded = False):
-    """Check to see if s needs rounding. If so, return True, but if return_rounded is true, return the rounded values."""
+    """Check to see if s needs rounding. If so, return True, but if return_rounded is true, 
+    return the rounded values instead. I don't like a function that can return True/False or a string,
+    but there you have it."""
     s = s.replace(",","")       # remove commas
     rounded_str = round_str(s)
     if s == rounded_str:
@@ -104,6 +111,13 @@ def str_needs_rounding(s,return_rounded = False):
     return True
 
     
+################################################################
+###
+### This code is for the drb_rounder application program.
+###
+################################################################
+
+
 ################################################################
 ### String manipulation code
 ################################################################
@@ -130,10 +144,6 @@ def numbers_in_line(line):
         pos = loc[1]
     return ret
     
-################################################################
-### filename code
-################################################################
-
 def safe_open(filename,mode,return_none=False):
     """Like open, but if filename exists and mode is 'w', produce an error"""
     if 'w' in mode and os.path.exists(filename):
@@ -145,135 +155,174 @@ def safe_open(filename,mode,return_none=False):
         exit(1)
     return open(filename,mode)
 
+class DRBRounder:
+    LOGFILE_ROUNDER_EXTENSIONS = ['.log','.txt','.sas']
+    HTML_HEADER="""<html>
+    <head>
+    <style>
+    .bcount {
+      color: red;
+      background-color: yellow;
+    }
+    .bfloat {
+      color: red;
+      background-color: yellow;
+      border-radius: 25px;
+      border: 2px solid black;
+      padding: 1px; 
+    }
+    .gcount {
+      color: black;
+      background-color: LightGreen;
+    }
+    .gfloat {
+      color: black;
+      background-color: LightGreen;
+      border-radius: 25px;
+      border: 2px solid black;
+      padding: 1px; 
+    }
 
-def process_csvfile(infilename):
-    """Process a tab or comma-delimited file and create a rounded file"""
-    (basename,ext) = os.path.splitext(oldfilename)
-    outfilename = basename+"_rounded"+ext
-    print("{} --> {}".format(infilename,outfilename))
-    line_number = 0
-    with open(infilename,"rU") as infile:
-        with safe_open(outfilename,"w") as outfile:
-            for line in infile:
-                stripped_line = line.rstrip()    # remove EOL
-                eol_len = len(line) - len(stripped_line)
-                eol = line[-eol_len:] # preserve the EOL characters
+    .gcount {
+      color: black;
+      background-color: LightGreen;
+    }
+    </style>
+    </head>
+    <body>
+    <pre>
+    """
 
-                line_number += 1
-                delimiter = args.delimiter
-                if delimiter not in stripped_line:
-                    print("No delimiter found in line {}: {}".format(line_number,stripped_line))
-                    if " " in stripped_line:
-                        print("Using space as delimiter for this line")
-                        delimiter = " "
+    HTML_FOOTER="""</pre>
+    </body>
+    </html>
+    """
+    def process_csvfile(self):
+        """Process a tab or comma-delimited file and create a rounded file"""
+        (basename,ext) = os.path.splitext(self.fname)
+        outfilename = basename+"_rounded"+ext
+        print("{} --> {}".format(self.fname,outfilename))
+        line_number = 0
+        with open(self.fname,"rU") as infile:
+            with safe_open(outfilename,"w") as outfile:
+                for line in infile:
+                    stripped_line = line.rstrip()    # remove EOL
+                    eol_len = len(line) - len(stripped_line)
+                    eol = line[-eol_len:] # preserve the EOL characters
 
-                fields = stripped_line.split(delimiter)
-                rounded_fields = [round_str(field) for field in fields]
-                outfile.write(delimiter.join(rounded_fields))
-                outfile.write(eol) # output the original eol
-    print("Lines processed: {}".format(line_number))
+                    line_number += 1
+                    delimiter = args.delimiter
+                    if delimiter not in stripped_line:
+                        print("No delimiter found in line {}: {}".format(line_number,stripped_line))
+                        if " " in stripped_line:
+                            print("Using space as delimiter for this line")
+                            delimiter = " "
 
-def process_xlsx(path):
-    from openpyxl import load_workbook
-    wb = load_workbook(path)
-    for sheetname in wb.sheetnames:
-        sheet = wb.get_sheet_by_name(sheetname)
-        for cell in sheet.get_cell_collection():
-            if type(cell.value)==int:
-                pass
-    print(dir(wb))
+                    fields = stripped_line.split(delimiter)
+                    rounded_fields = [round_str(field) for field in fields]
+                    outfile.write(delimiter.join(rounded_fields))
+                    outfile.write(eol) # output the original eol
+        print("Lines processed: {}".format(line_number))
 
-HTML_HEADER="""<html>
-<head>
-<style>
-.before {
-  color: red;
-  background-color: yellow;
-}
-.after {
-  color: black;
-  background-color: LightGreen;
-}
-</style>
-</head>
-<body>
-<pre>
-"""
+    def process_xlsx(self):
+        from openpyxl import load_workbook
+        wb = load_workbook(self.fname)
+        for sheetname in wb.sheetnames:
+            sheet = wb.get_sheet_by_name(sheetname)
+            for cell in sheet.get_cell_collection():
+                if type(cell.value)==int:
+                    pass
+        print(dir(wb))
 
-HTML_FOOTER="""</pre>
-</body>
-</html>
-"""
+    def process_logfile(self):
+        # Make sure that our intended output files do not exist
+        (name,ext) = os.path.splitext(self.fname)
+        fname_rounded = name + "_rounded" + ext
+        frounded = safe_open(fname_rounded, "w", return_none=True)
 
+        # before - highlight items that need rounding
+        fname_before  = name + "_0.html"
+        fbefore = safe_open(fname_before, "w", return_none=True)
 
-def process_logfile(fname):
-    # Make sure that our intended output files do not exist
-    (name,ext) = os.path.splitext(fname)
-    fname_rounded = name + "_rounded" + ext
-    frounded = safe_open(fname_rounded, "w", return_none=True)
-    
-    # before - highlight items that need rounding
-    fname_before  = name + "_0.html"
-    fbefore = safe_open(fname_before, "w", return_none=True)
+        # after - show it rounded
+        fname_after  = name + "_1.html"
+        fafter = safe_open(fname_after, "w", return_none=True)
 
-    # after - show it rounded
-    fname_after  = name + "_1.html"
-    fafter = safe_open(fname_after, "w", return_none=True)
+        if (not frounded) or (not fbefore) or (not fafter):
+            print("PROGRAM HALTS")
+            exit(1)
 
-    if (not frounded) or (not fbefore) or (not fafter):
-        print("PROGRAM HALTS")
-        exit(1)
+        fbefore.write(HTML_HEADER)
+        fafter.write(HTML_HEADER)
 
-    fbefore.write(HTML_HEADER)
-    fafter.write(HTML_HEADER)
+        # Note that the output was rounded
 
-    # Note that the output was rounded
-
-    frounded.write("*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***\n")
-    fbefore.write("<p><b>*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***</b></p>\n")
-    fafter.write("<p><b>*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***</b></p>\n")
+        frounded.write("*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***\n")
+        fbefore.write("<p><b>*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***</b></p>\n")
+        fafter.write("<p><b>*** THIS FILE HAS BEEN ROUNDED TO 4 SIGNIFICANT DIGITS ***</b></p>\n")
 
 
-    with open(fname) as fin:
-        for line in fin:
-            pos = 0             # where we are on the line
-            rounded = []
-            before = []
-            after  = []
-            spans = numbers_in_line(line)
-            for span in spans:
-                rounded_str = str_needs_rounding(line[ span[0] : span[1] ], return_rounded=True)
-                if rounded_str:
-                    before.append( line[ pos : span[0]] ) # part of line before span in question
-                    before.append("<span class='before'>")
-                    before.append( line[ span[0] : span[1]] ) #  span in question
-                    before.append("</span>")
+        with open(self.fname) as fin:
+            for line in fin:
+                pos = 0             # where we are on the line
+                rounded = []
+                before = []
+                after  = []
+                spans = numbers_in_line(line)
+                for span in spans:
+                    rounded_str = str_needs_rounding(line[ span[0] : span[1] ], return_rounded=True)
+                    if rounded_str:
+                        before.append( line[ pos : span[0]] ) # part of line before span in question
+                        before.append("<span class='before'>")
+                        before.append( line[ span[0] : span[1]] ) #  span in question
+                        before.append("</span>")
 
-                    after.append( line[ pos : span[0]] ) # part of line after span in question
-                    after.append("<span class='after'>")
-                    after.append( rounded_str ) #  span in question
-                    after.append("</span>")
+                        after.append( line[ pos : span[0]] ) # part of line after span in question
+                        after.append("<span class='after'>")
+                        after.append( rounded_str ) #  span in question
+                        after.append("</span>")
 
-                    rounded.append( line[ pos : span[0]] )
-                    rounded.append( rounded_str )
+                        rounded.append( line[ pos : span[0]] )
+                        rounded.append( rounded_str )
 
-                    pos = span[1] # next character on line to process is span[1]
-                    
-            # get end of line (or entire line, if not spans)
-            before.append( line[ pos: ] )  
-            after.append( line[ pos: ] ) 
-            rounded.append( line[ pos: ] ) 
+                        pos = span[1] # next character on line to process is span[1]
 
-            fbefore.write("".join(before))
-            fafter.write("".join(after))
-            frounded.write("".join(rounded))
-            
-    fbefore.write(HTML_FOOTER)
-    fafter.write(HTML_FOOTER)
+                # get end of line (or entire line, if not spans)
+                before.append( line[ pos: ] )  
+                after.append( line[ pos: ] ) 
+                rounded.append( line[ pos: ] ) 
 
-    frounded.close()
-    fbefore.close()
-    fafter.close()
+                fbefore.write("".join(before))
+                fafter.write("".join(after))
+                frounded.write("".join(rounded))
+
+        fbefore.write(HTML_FOOTER)
+        fafter.write(HTML_FOOTER)
+
+        frounded.close()
+        fbefore.close()
+        fafter.close()
+
+    def __init__(self,args,fname):
+        self.args  = args
+        self.fname = fname
+
+    def process(self):
+        if self.args.log:
+            self.process_logfile()
+            return
+
+        (base,ext) = os.path.splitext(self.fname)
+        ext = ext.lower()
+        if ext == ".xlsx":
+            self.process_xlsx()
+        elif ext in ['.csv','.tsv']:
+            self.process_csvfile()
+        elif ext in LOGFILE_ROUNDER_EXTENSIONS:
+            self.process_logfile()
+        else:
+            print("Don't know how to process '{}' type file in: {}".format(ext,fname),out=sys.stderr)
+            exit(1)
 
 if __name__=="__main__":
     import argparse
@@ -286,18 +335,5 @@ if __name__=="__main__":
     args = parser.parse_args()
     args.delimiter = "\t"       # default delimiter
     for fname in args.files:
-        if args.log:
-            process_logfile(fname)
-            continue
-
-        (base,ext) = os.path.splitext(fname)
-        ext = ext.lower()
-        if ext == ".xlsx":
-            process_xlsx(fname)
-        elif ext in ['.csv','.tsv']:
-            process_csvfile(fname)
-        elif ext in LOGFILE_ROUNDER_EXTENSIONS:
-            process_logfile(fname)
-        else:
-            print("Don't know how to process '{}' type file in: {}".format(ext,fname),out=sys.stderr)
-            exit(1)
+        d = DRBRounder(args,fname)
+        d.process()

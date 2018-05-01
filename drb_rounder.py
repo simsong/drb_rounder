@@ -5,7 +5,6 @@
 # Includes both code that can be imported into other programs, as well
 # as a program that will round input files.
 
-from decimal import Decimal,ROUND_HALF_EVEN,Context
 import os
 import re
 import math
@@ -38,6 +37,7 @@ def round_counts(n):
     if 100000 <= n <= 999999: return str(nearest( n, 1000))
     return round_decimal( n )
 
+from decimal import Decimal,ROUND_HALF_EVEN,Context
 prec4_rounder = Context(prec=4, rounding=ROUND_HALF_EVEN)
 def round4_float(f):
     return float(str(prec4_rounder.create_decimal(f)))

@@ -165,7 +165,7 @@ def safe_open(filename,mode,return_none=False, zap=False):
     return open(filename,mode)
 
 class DRBRounder:
-    LOGFILE_ROUNDER_EXTENSIONS = ['.log','.txt','.sas']
+    LOGFILE_ROUNDER_EXTENSIONS = ['.log', '.txt', '.sas', '.lst', '.tex']
     HTML_HEADER="""<html>
     <head>
     <style>

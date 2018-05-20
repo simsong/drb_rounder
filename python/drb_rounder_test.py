@@ -14,40 +14,56 @@ def test_nearest():
     assert nearest(61,10) == 60
     
 def test_round_counts():
-    assert round_counts(1) == "< 15"
-    assert round_counts(14) == "< 15"
+    assert round_counts(1) == "<15"
+    assert round_counts(14) == "<15"
     assert round_counts(15) == "20"
     assert round_counts(20) == "20"
     assert round_counts(24) == "20"
     
 
-def test_round_str():
-    assert round_str("1234")  == "1234"
-    assert round_str("12345") == "12340" # ROUND_HALF_EVEN
-    assert round_str("12346") == "12350" # ROUND_HALF_EVEN
-    assert round_str("123450") == "123400" # ROUND_HALF_EVEN
-    assert round_str("123455") == "123500" # ROUND_HALF_EVEN
-    assert round_str("123465") == "123500" # ROUND_HALF_EVEN
+def test_round4_str():
+    assert round4_str("1234")  == "1234"
+    assert round4_str("12345") == "12340" # ROUND_HALF_EVEN
+    assert round4_str("12346") == "12350" # ROUND_HALF_EVEN
+    assert round4_str("123450") == "123400" # ROUND_HALF_EVEN
+    assert round4_str("123455") == "123500" # ROUND_HALF_EVEN
+    assert round4_str("123465") == "123500" # ROUND_HALF_EVEN
 
-def test_str_needs_rounding():
-    assert str_needs_rounding("1") == False
-    assert str_needs_rounding("1,456") == False
-    assert str_needs_rounding("123,456") == True
-    assert str_needs_rounding("123456") == True
+def test_analyze_for_rounding():
+    # Check a number of case as both counts and floats
+    # Check as count data
+
+    assert analyze_for_rounding("1")[NEEDS_ROUNDING] == True # becomes <15
+    assert analyze_for_rounding("1")[ROUNDED] == "<15"
+    assert analyze_for_rounding("1,456")[NEEDS_ROUNDING] == True
+    assert analyze_for_rounding("1,456")[ROUNDED] == "1,500"
+    assert analyze_for_rounding("123,456")[NEEDS_ROUNDING] == True
+    assert analyze_for_rounding("123,456")[ROUNDED] == "123,000"
+    assert analyze_for_rounding("123456")[NEEDS_ROUNDING] == True
+    assert analyze_for_rounding("123456")[ROUNDED] == "123000"
+
+    # Check as floats
+
+    assert analyze_for_rounding("1.")[NEEDS_ROUNDING] == False
+    assert analyze_for_rounding("1,456.")[NEEDS_ROUNDING] == False
+    assert analyze_for_rounding("123,456.")[NEEDS_ROUNDING] == True
+    assert analyze_for_rounding("123,456.")[ROUNDED] == "123,500."
+    assert analyze_for_rounding("123456.")[NEEDS_ROUNDING] == True
+    assert analyze_for_rounding("123456.")[ROUNDED] == "123500."
 
 
-def test_round_float():
-    assert round_float(1.0)    == 1.0
-    assert round_float(1.2)    == 1.2
-    assert round_float(1.23)   == 1.23
-    assert round_float(1.234)  == 1.234
-    assert round_float(1.2345) == 1.234
+def test_round4_float():
+    assert round4_float(1.0)    == 1.0
+    assert round4_float(1.2)    == 1.2
+    assert round4_float(1.23)   == 1.23
+    assert round4_float(1.234)  == 1.234
+    assert round4_float(1.2345) == 1.234
 
-    assert round_float(10)    == 10
-    assert round_float(12)    == 12
-    assert round_float(12.3)   == 12.3
-    assert round_float(12.34)  == 12.34
-    assert round_float(12.345) == 12.35
+    assert round4_float(10)    == 10
+    assert round4_float(12)    == 12
+    assert round4_float(12.3)   == 12.3
+    assert round4_float(12.34)  == 12.34
+    assert round4_float(12.345) == 12.35
 
 def test_find_next_number():
     assert find_next_number("1") == (0,1)

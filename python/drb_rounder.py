@@ -101,7 +101,8 @@ ROUNDED_WITHOUT_COMMAS='rounded_without_commas'
 ROUNDED='rounded'
 NEEDS_ROUNDING='needs_rounding'
 def analyze_for_rounding(original):
-    """Analyze a string for rounding and return a dictionary including original string, rounded string, and rounding method."""
+    """Analyze a string for rounding and return a dictionary including original string, rounded string, and rounding method.
+    Returns a dictionary with the above properties"""
     ret = {}
     ret[ORIGINAL]                = original = str(original) # be sure it is a string
     ret[ORIGINAL_HAS_COMMAS]     = ',' in original
@@ -235,7 +236,7 @@ class DRBRounder:
                             delimiter = " "
 
                     fields = stripped_line.split(delimiter)
-                    rounded_fields = [round_str(field) for field in fields]
+                    rounded_fields = [round4_str(field) for field in fields]
                     outfile.write(delimiter.join(rounded_fields))
                     outfile.write(eol) # output the original eol
         print("Lines processed: {}".format(line_number))

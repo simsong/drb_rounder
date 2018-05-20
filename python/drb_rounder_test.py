@@ -20,14 +20,35 @@ def test_round_counts():
     assert round_counts(20) == "20"
     assert round_counts(24) == "20"
     
+def test_round4_float():
+    assert round_str(1234.)  == 1234.
+    assert round_str(12345.) == 12340.
+    assert round_str(12346.) == 12350. 
+    assert round_str(123450.) == 123400. 
+    assert round_str(123455.) == 123500. 
+    assert round_str(123465.) == 123500. 
 
-def test_round4_str():
-    assert round4_str("1234")  == "1234"
-    assert round4_str("12345") == "12340" # ROUND_HALF_EVEN
-    assert round4_str("12346") == "12350" # ROUND_HALF_EVEN
-    assert round4_str("123450") == "123400" # ROUND_HALF_EVEN
-    assert round4_str("123455") == "123500" # ROUND_HALF_EVEN
-    assert round4_str("123465") == "123500" # ROUND_HALF_EVEN
+
+def test_round_str():
+    # Counts
+    assert round_str("1234")  == "1200"
+    assert round_str("12345") == "12500" # ROUND_HALF_EVEN
+    assert round_str("12346") == "12500" # ROUND_HALF_EVEN
+    assert round_str("123450") == "123000" # ROUND_HALF_EVEN
+    assert round_str("123455") == "123000" # ROUND_HALF_EVEN
+    assert round_str("123465") == "123000" # ROUND_HALF_EVEN
+
+    # decimals
+    assert round_str("1234.")  == "1234."
+    assert round_str("12345.") == "12340." # ROUND_HALF_EVEN
+    assert round_str("12346.") == "12350." # ROUND_HALF_EVEN
+    assert round_str("123450.") == "123400." # ROUND_HALF_EVEN
+    assert round_str("123455.") == "123500." # ROUND_HALF_EVEN
+    assert round_str("123465.") == "123500." # ROUND_HALF_EVEN
+
+def test_determine_rounding_method():
+    assert determine_rounding_method("1,456") == COUNTS_METHOD
+    assert determine_rounding_method("1,456.") == ROUND4_METHOD
 
 def test_analyze_for_rounding():
     # Check a number of case as both counts and floats

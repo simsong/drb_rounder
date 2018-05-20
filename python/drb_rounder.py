@@ -42,16 +42,30 @@ prec4_rounder = Context(prec=4, rounding=ROUND_HALF_EVEN)
 def round4_float(f):
     return float(str(prec4_rounder.create_decimal(f)))
 
-def round4_str(s,add_spaces=True,round_counts=False):
+def determine_rounding_method(s):
+    if "." in s:
+        return ROUND4_METHOD
+    else:
+        return COUNTS_METHOD
+
+def round_str(org,add_spaces=True,method=None):
     """Take a string, convert it to a number, and round it. Add spaces if
     required. If it is not a number, don't round. Puts commas back in the
     numbers. Returns as a string.
     """
-    tmp = s
+
+    # If method was not specified, method is ROUND4_METHOD 
+    # if a period is present. Otherwise method is ROUND_COUNTS
+    if not method:
+        method=determine_rounding_method(s)
+    assert method!=None
+
+    # Make a temp copy of the string
+    tmp = org
 
     # Remove the non-digits
-    digit_chars = "0123456789.-"
-    leading_text = ""
+    digit_chars   = "0123456789.-"
+    leading_text  = ""
     trailing_text = ""
     while len(tmp)>0 and tmp[0] not in digit_chars:
         leading_text = leading_text + tmp[0]
@@ -62,41 +76,41 @@ def round4_str(s,add_spaces=True,round_counts=False):
         trailing_text = tmp[-1] + trailing_text
         tmp = tmp[:-1]
     
-    # Perform floating point rounding
+    # Perform the appropriate method of rounding
     # Both of the following are equivalent 
-    rounded = round4_float(float(tmp))
-
-    if round_counts and 0 <= rounded <= 7:
-        rounded = round_counts(rounded)
+    if method==ROUND4_METHOD:
+        rounded = round4_float(float(tmp))
+    else:
+        rounded = round_counts(tmp)
 
     # If the original string had commas, add them back
     # Otherwise just change the rounded number to a string
-    if "," in s:
+    # Note that we can't do this if rounded is LESS_THAN_15
+    if rounded==LESS_THAN_15:
+        rounded_str = rounded
+    elif "," in s:
         rounded_str = "{:,}".format(rounded)
     else:
         rounded_str = "{:}".format(rounded)
 
-    # If the original string had no ".", make sure that the new string has no "."
-    if ("." not in s) and ("." in rounded_str):
-        rounded_str = rounded_str[0: rounded_str.find(".")]
+    # If ROUND4_METHOD was used and there is no ".", then add a "." back
+    if method==ROUND4_METHOD and "." not in rounded_str:
+        rounded_str = rounded_str + "."
         
-    # If the original string ended in ".", make sure that the new string ends in "."
-    if (s.endswith(".")) and (not rounded_str.endswith(".")) and ("." in rounded_str):
-        rounded_str = rounded_str[0: rounded_str.find(".")+1]
-
     # Put it back together and return
     ret = leading_text + rounded_str + trailing_text
 
     if add_spaces:
         # Add missing spaces
         ret += " " * (len(s) - len(ret))
-        assert len(s) == len(ret)
+        # the new one might be bigger if we change a "1" to a "<15" or a "1234." to a "1234.0"
+        assert len(org) <= len(ret) 
     return ret
         
 ORIGINAL='original'
 ORIGINAL_WITHOUT_COMMAS='original_without_commas'
 ORIGINAL_HAS_COMMAS='original_has_commas'
-ROUNDING_METHOD='rounding_method'
+ROUNDING_METHOD='rounding_method'   # Can be ROUND4_METHOD and COUNTS_METHOD
 ROUNDED_WITHOUT_COMMAS='rounded_without_commas'
 ROUNDED='rounded'
 NEEDS_ROUNDING='needs_rounding'
@@ -109,7 +123,7 @@ def analyze_for_rounding(original):
     ret[ORIGINAL_WITHOUT_COMMAS] = original.replace(",","") # remove commas
     if "." in ret[ORIGINAL_WITHOUT_COMMAS]:
         ret[ROUNDING_METHOD] = ROUND4_METHOD
-        ret[ROUNDED_WITHOUT_COMMAS] = round4_str(ret[ORIGINAL_WITHOUT_COMMAS])
+        ret[ROUNDED_WITHOUT_COMMAS] = round_str(ret[ORIGINAL_WITHOUT_COMMAS])
     else:
         ret[ROUNDING_METHOD] = COUNTS_METHOD
         ret[ROUNDED_WITHOUT_COMMAS] = round_counts(ret[ORIGINAL_WITHOUT_COMMAS])
@@ -236,7 +250,7 @@ class DRBRounder:
                             delimiter = " "
 
                     fields = stripped_line.split(delimiter)
-                    rounded_fields = [round4_str(field) for field in fields]
+                    rounded_fields = [round_str(field) for field in fields]
                     outfile.write(delimiter.join(rounded_fields))
                     outfile.write(eol) # output the original eol
         print("Lines processed: {}".format(line_number))

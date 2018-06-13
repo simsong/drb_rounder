@@ -37,7 +37,8 @@ data &outputfile;
         %LET var = %SCAN(&varlist.,&i.);
 
 		* Round to four significant digits;
-		&var._4 = round(&var.,10**(floor(log10(&var.))-3));
+		if &var.=0 then &var._4=0;
+		else &var._4 = round(&var.,10**(floor(log10(abs(&var.)))-3)); 		
 
         %LET i = %EVAL(&i.+1);
     %END;

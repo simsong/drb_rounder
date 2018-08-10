@@ -20,7 +20,7 @@
 foreach var in "`1'" "`2'" "`3'" "`4'" "`5'" "`6'" "`7'" "`8'" "`9'" {
 if "`var'"=="" exit
 
-replace `var' = round(`var',10^(floor(log10(`var'))-3))
+replace `var' = round(`var',10^(floor(log10(abs(`var')))-3))
 
 }
 

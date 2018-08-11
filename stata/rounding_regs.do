@@ -14,7 +14,7 @@ capture program drop round
 program define round, eclass
    mat A = e(b)
    forval j = 1/`=colsof(matrix(A))' { 
-      mat A[1,`j'] = round(A[1,`j'],10^(floor(log10(A[1,`j']))-3))
+      mat A[1,`j'] = round(A[1,`j'],10^(floor(log10(abs(A[1,`j'])))-3))
    } 
    ereturn repost b = A
 

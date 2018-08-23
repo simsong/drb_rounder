@@ -3,3 +3,6 @@ __pycache__
 .DS_Store
 .cache
 test_input_?.html
+.pytest_cache
+rounder.log
+rounded_values.log

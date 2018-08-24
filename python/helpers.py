@@ -26,7 +26,6 @@ def find_next_number(line, pos=0):
         span = m.span()
         return (span[0]+pos,span[1]+pos)
 
-
 def numbers_in_line(line):
     """ Returns an array with all of the numbers in the line """
     ret = []
@@ -98,7 +97,8 @@ def remove_trailing_zero(x):
 ################################################################
 def safe_open(filename, mode, return_none=False, zap=False):
     """Like open, but if filename exists and mode is 'w', produce an error"""
-    if 'w' in mode and os.path.exists(filename) and not zap:
+    print("safe_open",filename,os.path.exists(filename))
+    if ('w' in mode) and (os.path.exists(filename)) and (not zap):
         rounder_logger.error("ABORT: Output file exists '{}'. Please delete "
                 "or rename the file and restart the program".format(filename))
         if return_none:

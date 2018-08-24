@@ -7,6 +7,7 @@ import pytest
 import sys
 import os
 import os.path
+import shutil
 
 sys.path.append( os.path.join( os.path.dirname(__file__)))
 sys.path.append( os.path.join( os.path.dirname(__file__), ".."))
@@ -16,15 +17,16 @@ WORK_DIR       = os.path.join( os.path.dirname(__file__), "work")
 WORK2_DIR      = os.path.join( os.path.dirname(__file__), "work2")
 DRB_ROUNDER    = os.path.join( os.path.dirname(__file__), "../drb_rounder.py" )
 
-def rm_Rf(workdir):
-    """
-    Helper function to clear out a given directory if it exists
-    """
-    if os.path.exists(workdir):
-        for (root,dirs,files) in os.walk(workdir,topdown=False):
-            for fn in files:
-                os.unlink(os.path.join(root,fn))
-            for d in dirs:
-                os.rmdir(os.path.join(root,d))
-        os.rmdir(workdir)
+def prep_workdir():
+    # Copy all of the files in TEST_FILES_DIR into TEST_FILES_DIR
+
+    if not os.path.exists(WORK_DIR):
+        os.mkdir(WORK_DIR)
+
+    for fn in os.listdir(TEST_FILES_DIR):
+        ofn = os.path.join(TEST_FILES_DIR, fn)
+        nfn = os.path.join(WORK_DIR, fn)
+        if not os.path.exists(nfn):
+            shutil.copy( ofn, nfn)
+            assert os.path.exists(nfn)
 

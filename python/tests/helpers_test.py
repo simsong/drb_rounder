@@ -5,7 +5,7 @@ import sys
 import os
 import os.path
 
-from common import TEST_FILES_DIR,WORK_DIR,rm_Rf
+from common import *
 from helpers import *  # pylint: disable=W0614
 
 
@@ -111,9 +111,8 @@ def test_convert_to_xlsx():
     from openpyxl import load_workbook
 
     # Remove directory if it exists and create new working directory
-    rm_Rf(WORK_DIR)
-    os.mkdir(WORK_DIR)
-
+    prep_workdir()
+    
     EXCEL_FN  = "test_xls.xls"
     EXCELX_FN = "test_xls.xlsx"
 
@@ -166,8 +165,7 @@ def test_check_for_excel_formulas():
     FILL_RED = PatternFill(start_color='FF0000', end_color='FF0000', fill_type='solid')
 
     # Remove directory if it exists and create new working directory
-    rm_Rf(WORK_DIR)
-    os.mkdir(WORK_DIR)
+    prep_workdir()
 
     # Copy excel file from test directory over to our work directory
     shutil.copy( os.path.join(TEST_FILES_DIR, TEST_FN), WORK_DIR)

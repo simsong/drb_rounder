@@ -3,7 +3,7 @@ import sys
 import os
 import os.path
 
-from common import rm_Rf, TEST_FILES_DIR, WORK_DIR
+from common import *
 
 import number
 

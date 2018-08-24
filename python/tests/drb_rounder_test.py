@@ -11,15 +11,6 @@ import shutil
 from common import *
 from drb_rounder import *  # pylint: disable=W0614
 
-def prep_test_files_dir():
-    # Copy all of the files in TEST_FILES_DIR into TEST_FILES_DIR
-
-    if not os.path.exists(WORK_DIR):
-        os.mkdir(WORK_DIR)
-
-    for fn in os.listdir(TEST_FILES_DIR):
-        shutil.copy( os.path.join(TEST_FILES_DIR, fn), os.path.join(WORK_DIR, fn))
-
 
 def test_process_csv():
     """
@@ -42,7 +33,7 @@ def test_process_csv():
     COMMA_ROUNDED   = ["40", "74.0", "170.1", "150", "700", "16610.", "32.6", "7003000", "20", "10000", "0.5", "150"]
     TAB_ROUNDED     = ["<15", "20", "6700.", "501000", "1007000", "55.2"]
 
-    prep_test_files_dir()
+    prep_workdir()
 
     def read_csv(fname, delimiter):
         """
@@ -107,7 +98,7 @@ def test_process_xlsx():
     COMMENT_FLOAT = Comment('Orange: rounder identified a FLOAT that needed to be rounded', 'DRB_ROUNDER')
     COMMENT_INTEGER = Comment('Blue: rounder identified a COUNT that needed to be rounded', 'DRB_ROUNDER')
 
-    prep_test_files_dir()
+    prep_workdir()
 
     # Load Workbook
     assert os.path.exists(EXCEL_FN)

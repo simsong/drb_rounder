@@ -8,12 +8,11 @@ class Number:
     based on respective rounding policies.
     """
 
-    def __init__(self, orig, values_logger=None, method=None):
+    def __init__(self, orig, method=None):
         """
         Initialize all the variables that need to be maintained for numbers
         """
         self.original = str(orig)
-        self.values_logger = values_logger
         self.original_cleaned = None
         self.rounded_cleaned = None
         self.rounded = None
@@ -162,7 +161,4 @@ class Number:
         else:
             self.needed_rounding = self.original != self.rounded
 
-        # Logging
-        if self.needed_rounding and self.values_logger:
-            self.values_logger.info("{} --> {}".format(self.original, self.rounded))
         return

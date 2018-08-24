@@ -87,7 +87,19 @@ class DRBRounder:
     def __init__(self, args, fname):
         self.args  = args
         self.fname = fname
+        self.new_fname = os.path.splitext(fname)[0] + "_rounded.xlsx"
         self.logfile_path = os.path.splitext(fname)[0] + "_rounded.log"
+        if not args.zap:
+            error = False
+            for fn in [self.new_fname, self.logfile_path]:
+                if os.path.exists(fn) and not args.zap:
+                    rounder_logger.error("Error: %s exists. Delete file or add --zap option", fn)
+                    error = True
+            if error:
+                exit(1)
+
+        if os.path.exists(self.logfile_path):
+            os.unlink(self.logfile_path)
         self.values_logger  = setup_logger('values', self.logfile_path, '%(message)s', 'w', False)
 
     def process_csvfile(self):
@@ -122,9 +134,10 @@ class DRBRounder:
                     fields = stripped_line.split(delimiter)
                     rounded_fields = []
                     for field in fields:
-                        num = number.Number(field, values_logger=self.values_logger)
+                        num = number.Number(field)
                         num.round()
                         if num.needed_rounding:
+                            self.values_logger.info("line %d  %s --> %s",line_number,num.original,num.rounded)
                             rounded_fields.append(num.rounded)
                         else:
                             rounded_fields.append(num.original)
@@ -187,12 +200,13 @@ class DRBRounder:
                 # to 15 significant figures first. IEEE floating point gives imprecision after 17 digits
                 if type(cell.value)==float:
                     value = format(cell.value,'.15') 
-                    num = number.Number(value, values_logger=self.values_logger, method=ROUND4_METHOD)
+                    num = number.Number(value, method=ROUND4_METHOD)
                 else:
-                    num = number.Number(str(cell.value), values_logger=self.values_logger)
+                    num = number.Number(str(cell.value))
 
                 num.round()
                 if num.needed_rounding == True:
+                    self.values_logger.info("cell %s!%s%s  %s --> %s",sheetname,cell.column,cell.row,num.original,num.rounded)
                     if num.method == ROUND4_METHOD:
                         if not highlight:  # argument passed to only highlight spreadsheet
                             try:  # Successful typecast if no special characters
@@ -218,13 +232,12 @@ class DRBRounder:
                             first_integer_flag = False
 
         # Save the rounded calculations to a new file
-        (base, ext) = os.path.splitext(fname)
-        new_fname = base + "_rounded.xlsx"
         try:
-            wb.save(new_fname)
+            wb.save(self.new_fname)
+            rounder_logger.info("STATUS:   New spreadsheet written to %s",self.new_fname)
         except PermissionError:
             rounder_logger.error('ABORT: Could not save. Please close rounded spreadsheet')
-            sys.exit(1)
+            exit(1)
 
     def process_logfile(self):
         # Make sure that our intended output files do not exist
@@ -264,14 +277,17 @@ class DRBRounder:
             what.write("</pre>\n</div><div id='content'>\n<pre>\n")
 
         with open(self.fname) as fin:
+            linenumber = 0
             for line in fin:
+                linenumber += 1
                 pos = 0  # where we are on the line
                 spans = helpers.numbers_in_line(line)
                 for span in spans:
                     (col0, col1) = (span[0], span[1])  # the columns where the number appears
-                    num = number.Number(line[col0:col1], values_logger=self.values_logger)
+                    num = number.Number(line[col0:col1])
                     num.round()
                     if num.needed_rounding:
+                        self.values_logger.info("line %s  %s --> %s",linenumber,num.original,num.rounded)
                         if num.method == ROUND4_METHOD:
                             kind = 'float'
                         else:
@@ -353,6 +369,7 @@ if __name__=="__main__":
     else:
         args.delimiter = ","  # default delimiter
 
+    # rounder_log is the logfile for all uses of the rounder. 
     rounder_logger = setup_logger('rounder', os.getcwd() + '/rounder.log', '%(asctime)s:\t%(message)s', 'a', True)
 
     for fname in args.files:

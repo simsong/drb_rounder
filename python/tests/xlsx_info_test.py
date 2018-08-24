@@ -4,7 +4,7 @@ import pytest
 import os
 import os.path
 
-from common import TEST_FILES_DIR
+from common import *
 
 from latex_tools import run_latex
 from xlsx_info import *
@@ -13,7 +13,6 @@ from tytable import HTML, TEXT, LATEX
 import subprocess
 import shutil
 
-WORK2_DIR = os.path.join( os.path.dirname(__file__), "work2")
 XLSX_PATH = os.path.join( TEST_FILES_DIR, "spreadsheet.xlsx")
 SPREADSHEET_XLSX=os.path.join(WORK2_DIR, os.path.basename(XLSX_PATH))
 SPREADSHEET_TEX=os.path.join(WORK2_DIR, os.path.basename(XLSX_PATH)).replace(".xlsx",".tex")

@@ -4,11 +4,12 @@ import os
 import os.path
 import shutil
 
-from common import rm_Rf, TEST_FILES_DIR, WORK_DIR
+#
+# Common tests for the DRB_ROUNDER
 
+
+from common import *
 from drb_rounder import *  # pylint: disable=W0614
-
-
 
 def prep_test_files_dir():
     # Copy all of the files in TEST_FILES_DIR into TEST_FILES_DIR
@@ -37,9 +38,9 @@ def test_process_csv():
     FNAME_COMMA_ROUNDED = os.path.join(WORK_DIR, "test_comma_rounded.csv")
     FNAME_TAB_ROUNDED   = os.path.join(WORK_DIR, "test_tab_rounded.csv")
     COMMA_ORIGINALS = ["41", "74.0", "170.1111111", "142", "689", "16612.832", "32.6", "7003200", "15", "10032", "0.5", "167"]
-    TAB_ORIGINALS = ["10", "22", "6700.32", "500932", "1007382", "55.2"]
-    COMMA_ROUNDED = ["40", "74.0", "170.1", "150", "700", "16610.", "32.6", "7003000", "20", "10000", "0.5", "150"]
-    TAB_ROUNDED = ["<15", "20", "6700.", "501000", "1007000", "55.2"]
+    TAB_ORIGINALS   = ["10", "22", "6700.32", "500932", "1007382", "55.2"]
+    COMMA_ROUNDED   = ["40", "74.0", "170.1", "150", "700", "16610.", "32.6", "7003000", "20", "10000", "0.5", "150"]
+    TAB_ROUNDED     = ["<15", "20", "6700.", "501000", "1007000", "55.2"]
 
     prep_test_files_dir()
 
@@ -104,7 +105,7 @@ def test_process_xlsx():
     FILL_ORANGE = PatternFill(start_color='FFA500', end_color='FFA500', fill_type='solid')
     FILL_BLUE = PatternFill(start_color='00b8ff', end_color='00b8ff', fill_type='solid')
     COMMENT_FLOAT = Comment('Orange: rounder identified a FLOAT that needed to be rounded', 'DRB_ROUNDER')
-    COMMENT_INTEGER = Comment('Blue: rounder identified an INT that needed to be rounded', 'DRB_ROUNDER')
+    COMMENT_INTEGER = Comment('Blue: rounder identified a COUNT that needed to be rounded', 'DRB_ROUNDER')
 
     prep_test_files_dir()
 
@@ -180,3 +181,14 @@ def test_process_xlsx():
     assert ws['C2'].comment == COMMENT_FLOAT
 
     wb.save(ROUNDED_EXCEL_FN)
+
+
+INFILES=[ ("concentration_stats.xlsx","concentration_stats_rounded.xlsx") ] 
+
+def test_files():
+    """For specific files, run the rounder on them and verify the results."""
+    from subprocess import call,Popen,PIPE
+    for (infile,outfile) in INFILES:
+        infile_path = os.path.join(WORK_DIR, infile)
+        assert os.path.exists(infile_path)
+        res = call([sys.executable,DRB_ROUNDER, infile_path])

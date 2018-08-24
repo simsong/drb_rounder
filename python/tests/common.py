@@ -11,8 +11,10 @@ import os.path
 sys.path.append( os.path.join( os.path.dirname(__file__)))
 sys.path.append( os.path.join( os.path.dirname(__file__), ".."))
 
-TEST_FILES_DIR = os.path.join(os.path.dirname(__file__), "../../test_files" )
+TEST_FILES_DIR = os.path.join( os.path.dirname(__file__), "../../test_files" )
 WORK_DIR       = os.path.join( os.path.dirname(__file__), "work")
+WORK2_DIR      = os.path.join( os.path.dirname(__file__), "work2")
+DRB_ROUNDER    = os.path.join( os.path.dirname(__file__), "../drb_rounder.py" )
 
 def rm_Rf(workdir):
     """

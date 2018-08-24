@@ -1,5 +1,5 @@
 import helpers
-from helpers import LESS_THAN_15, ROUND4_METHOD, COUNTS_METHOD, values_logger, rounder_logger
+from helpers import LESS_THAN_15, ROUND4_METHOD, COUNTS_METHOD
 
 class Number:
     """
@@ -8,23 +8,21 @@ class Number:
     based on respective rounding policies.
     """
 
-    def __init__(self, orig, test_init=False):
+    def __init__(self, orig, values_logger=None, method=None):
         """
         Initialize all the variables that need to be maintained for numbers
         """
-        if test_init:
-            self.init_for_testing(orig)
-        else:
-            self.original = str(orig)
-            self.original_cleaned = None
-            self.rounded_cleaned = None
-            self.rounded = None
-            self.leading_text = None
-            self.trailing_text = None
-            self.has_commas = None
-            self.in_scientific_form = None
-            self.method = None
-            self.needs_rounding = None
+        self.original = str(orig)
+        self.values_logger = values_logger
+        self.original_cleaned = None
+        self.rounded_cleaned = None
+        self.rounded = None
+        self.leading_text = None
+        self.trailing_text = None
+        self.has_commas = None
+        self.in_scientific_form = None
+        self.method = method
+        self.needed_rounding = None
 
     def init_for_testing(self, rounding_info):
         self.original = rounding_info['original']
@@ -36,7 +34,7 @@ class Number:
         self.has_commas = rounding_info['has_commas']
         self.in_scientific_form = rounding_info['in_scientific_form']
         self.method = rounding_info['method']
-        self.needs_rounding = rounding_info['needs_rounding']
+        self.needed_rounding = rounding_info['needed_rounding']
 
     def clean(self):
         """
@@ -118,7 +116,7 @@ class Number:
         self.rounded = ret
         return
 
-    def round(self, fname=None):
+    def round(self):
         """
         Rounds the string based on respective rounding rules
         """
@@ -133,15 +131,16 @@ class Number:
         #   - the cleaned string is an empty string
         #   - there are still other symbols found in the cleaned string
         if not self.in_scientific_form:
-            self.needs_rounding = False
+            self.needed_rounding = False
             if re.search('[a-zA-Z]', self.original) : return
             if self.original_cleaned == "" : return
             if re.search("\\D", self.original_cleaned.replace(".", "")) : return
 
         # Perform the appropriate method of rounding.
-        self.needs_rounding = True
+        self.needed_rounding = True
         total_digits = helpers.find_sigfigs(self.original_cleaned) + helpers.num_trailing_zeros(self.original_cleaned)
-        if "." in self.original_cleaned:  # pylint: disable=E1135
+
+        if ("." in self.original_cleaned) or (self.method==ROUND4_METHOD):  # pylint: disable=E1135
             self.method = ROUND4_METHOD
             self.rounded_cleaned = str(helpers.round4_float(float(self.original_cleaned)))
             if total_digits > 4:
@@ -155,16 +154,15 @@ class Number:
 
         # Was rounding really needed?
         if self.rounded_cleaned == LESS_THAN_15:
-            self.needs_rounding = True
+            self.needed_rounding = True
         elif self.method == ROUND4_METHOD and self.in_scientific_form:
-            self.needs_rounding = float(self.original_cleaned) != float(self.rounded_cleaned)
+            self.needed_rounding = float(self.original_cleaned) != float(self.rounded_cleaned)
         elif self.method == ROUND4_METHOD and total_digits <= 4:
-            self.needs_rounding = float(self.original_cleaned) != float(self.rounded_cleaned)
+            self.needed_rounding = float(self.original_cleaned) != float(self.rounded_cleaned)
         else:
-            self.needs_rounding = self.original != self.rounded
+            self.needed_rounding = self.original != self.rounded
 
-        # Logs
-        if self.needs_rounding:
-            values_logger.info("In file '{}':\t{} was rounded to {}"
-                            .format(fname, self.original, self.rounded))
+        # Logging
+        if self.needed_rounding and self.values_logger:
+            self.values_logger.info("{} --> {}".format(self.original, self.rounded))
         return

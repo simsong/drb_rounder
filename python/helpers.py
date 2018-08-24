@@ -8,31 +8,7 @@ ROUND4_METHOD="round4"
 COUNTS_METHOD="counts"
 LESS_THAN_15 = "<15"
 
-
-################################################################
-### Logging System
-################################################################
-def setup_logger(name, log_file, format, log_mode, stream_handler):
-    """Function to set up as many loggers as you want"""
-    DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-    handler = logging.FileHandler(log_file, mode=log_mode)
-    handler.setFormatter(logging.Formatter(fmt=format, datefmt=DATE_FORMAT))
-
-    logger = logging.getLogger(name)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
-    if stream_handler:
-        logger.addHandler(logging.StreamHandler())  # stderr
-
-    return logger
-
-rounder_logger = setup_logger('rounder', os.getcwd() + '/rounder.log',
-                              '%(asctime)s:\t%(message)s', 
-                              'a', True)
-values_logger = setup_logger('values', os.getcwd() + '/rounded_values.log', 
-                             '%(message)s', 'w', False)
-
+WINDOWS_ERROR="Automated conversion only works on Windows machines. Please manually convert."
 
 ################################################################
 ### String manipulation code
@@ -142,10 +118,7 @@ def convert_to_xlsx(fname):
     try:
         import win32com.client as win32
     except ImportError:
-        rounder_logger.error("ABORT: Program is failing to convert spreadsheet "
-                            "to xlsx version spreadsheet. Automated conversion "
-                            "only works on Windows machines. Please manually "
-                            "convert.")
+        rounder_logger.error("ABORT: Program is failing to convert spreadsheet to xlsx version spreadsheet. " + WINDOWS_ERROR)
         sys.exit(1)
 
     # Only to be used for .ods and .xlsx files
@@ -178,9 +151,7 @@ def convert_word_to_txt(fname):
     try:
         import win32com.client as win32
     except ImportError:
-        rounder_logger.error("ABORT: Program is failing to the document to a "
-                            ".txt file. Automated conversion only works on "
-                            "Windows machines. Please manually convert.")
+        rounder_logger.error("ABORT: Program is failing to the document to a .txt file. " + WINDOWS_ERROR)
         sys.exit(1)
 
     fname = os.path.abspath(fname)  # Uses Windows style file path

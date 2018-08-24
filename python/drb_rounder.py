@@ -10,7 +10,28 @@ import os
 
 import number
 import helpers
-from helpers import rounder_logger, values_logger, LESS_THAN_15, ROUND4_METHOD, COUNTS_METHOD
+import logging
+from helpers import LESS_THAN_15, ROUND4_METHOD, COUNTS_METHOD
+
+
+################################################################
+### Logging System
+################################################################
+def setup_logger(name, log_file, format, log_mode, stream_handler):
+    """Function to set up as many loggers as you want"""
+    DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+    handler = logging.FileHandler(log_file, mode=log_mode)
+    handler.setFormatter(logging.Formatter(fmt=format, datefmt=DATE_FORMAT))
+
+    logger = logging.getLogger(name)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    if stream_handler:
+        logger.addHandler(logging.StreamHandler())  # stderr
+
+    return logger
+
 
 
 class DRBRounder:
@@ -63,6 +84,12 @@ class DRBRounder:
     </table>
     """
 
+    def __init__(self, args, fname):
+        self.args  = args
+        self.fname = fname
+        self.logfile_path = os.path.splitext(fname)[0] + "_rounded.log"
+        self.values_logger  = setup_logger('values', self.logfile_path, '%(message)s', 'w', False)
+
     def process_csvfile(self):
         """Process a tab or comma-delimited file and create a rounded file"""
         # Open file and set up
@@ -86,20 +113,18 @@ class DRBRounder:
 
                     # Check to make sure delimiter is seen
                     if delimiter not in stripped_line:
-                        rounder_logger.info("\tNo delimiter found in line {}: "
-                                            "{}".format(line_number, stripped_line))
+                        rounder_logger.info("\tNo delimiter found in line {}: {}".format(line_number, stripped_line))
                         if " " in stripped_line:
-                            rounder_logger.info("\tUsing space as delimiter for"
-                                                " this line")
+                            rounder_logger.info("\tUsing space as delimiter for this line")
                             delimiter = " "
 
                     # Split by delimiter and round all items
                     fields = stripped_line.split(delimiter)
                     rounded_fields = []
                     for field in fields:
-                        num = number.Number(field)
-                        num.round(self.fname)
-                        if num.needs_rounding:
+                        num = number.Number(field, values_logger=self.values_logger)
+                        num.round()
+                        if num.needed_rounding:
                             rounded_fields.append(num.rounded)
                         else:
                             rounded_fields.append(num.original)
@@ -108,21 +133,14 @@ class DRBRounder:
 
     def process_xlsx(self, is_xlsx):
         """Process an excel spreadsheet and create a rounded spreadsheet"""
-        import os
         from openpyxl import load_workbook
         from openpyxl.styles import PatternFill
         from openpyxl.comments import Comment
 
-        FILL_ORANGE = PatternFill(start_color='FFA500',
-                                  end_color='FFA500',
-                                  fill_type='solid')
-        FILL_BLUE = PatternFill(start_color='00b8ff',
-                                end_color='00b8ff',
-                                fill_type='solid')
-        COMMENT_FLOAT = Comment('Orange: rounder identified a FLOAT that needed to be rounded',
-                                'DRB_ROUNDER')
-        COMMENT_INTEGER = Comment('Blue: rounder identified an INT that needed to be rounded',
-                                  'DRB_ROUNDER')
+        FILL_ORANGE     = PatternFill(start_color='FFA500', end_color='FFA500', fill_type='solid')
+        FILL_BLUE       = PatternFill(start_color='00b8ff',   end_color='00b8ff', fill_type='solid')
+        COMMENT_FLOAT   = Comment('Orange: rounder identified a FLOAT that needed to be rounded', 'DRB_ROUNDER')
+        COMMENT_INTEGER = Comment('Blue: rounder identified a COUNT that needed to be rounded', 'DRB_ROUNDER')
         first_float_flag = True
         first_integer_flag = True
         fname = self.fname
@@ -152,12 +170,29 @@ class DRBRounder:
 
         # Apply rounding rules to all cells in spreadsheet
         wb = load_workbook(fname, data_only=True)  # Open the workbook
+        values_seen = 0
+        values_rounded = 0
+        import numpy
         for sheetname in wb.sheetnames:
             sheet = wb.get_sheet_by_name(sheetname)
-            for cell in sheet.get_cell_collection():  # reads left to right from top to bottom
-                num = number.Number(str(cell.value))
-                num.round(fname)
-                if num.needs_rounding == True:
+
+            # reads each row left to right, then each row, top to bottom
+            for cell in sheet.get_cell_collection():  
+
+                values_seen += 1
+
+                # Windows stores excel flaots as single precision sometimes, 
+                # which cased a value 0.004237 to be read by Python as 0.0042369999999999994.
+                # The following code checks to see if a float is stored and, if it is, it is rounded
+                # to 15 significant figures first. IEEE floating point gives imprecision after 17 digits
+                if type(cell.value)==float:
+                    value = format(cell.value,'.15') 
+                    num = number.Number(value, values_logger=self.values_logger, method=ROUND4_METHOD)
+                else:
+                    num = number.Number(str(cell.value), values_logger=self.values_logger)
+
+                num.round()
+                if num.needed_rounding == True:
                     if num.method == ROUND4_METHOD:
                         if not highlight:  # argument passed to only highlight spreadsheet
                             try:  # Successful typecast if no special characters
@@ -188,8 +223,7 @@ class DRBRounder:
         try:
             wb.save(new_fname)
         except PermissionError:
-            rounder_logger.error('ABORT: Could not save. Please close rounded '
-                                 'spreadsheet')
+            rounder_logger.error('ABORT: Could not save. Please close rounded spreadsheet')
             sys.exit(1)
 
     def process_logfile(self):
@@ -235,9 +269,9 @@ class DRBRounder:
                 spans = helpers.numbers_in_line(line)
                 for span in spans:
                     (col0, col1) = (span[0], span[1])  # the columns where the number appears
-                    num = number.Number(line[col0:col1])
-                    num.round(self.fname)
-                    if num.needs_rounding:
+                    num = number.Number(line[col0:col1], values_logger=self.values_logger)
+                    num.round()
+                    if num.needed_rounding:
                         if num.method == ROUND4_METHOD:
                             kind = 'float'
                         else:
@@ -274,10 +308,6 @@ class DRBRounder:
         fbefore.close()
         fafter.close()
 
-    def __init__(self, args, fname):
-        self.args  = args
-        self.fname = fname
-
     def process(self):
         if self.args.log:
             self.process_logfile()
@@ -299,37 +329,23 @@ class DRBRounder:
         elif ext in self.LOGFILE_ROUNDER_EXTENSIONS:
             self.process_logfile()
         else:
-            rounder_logger.error("ABORT: Don't know how to process '{}' type "
-                                "file in: {}".format(ext, fname))
+            rounder_logger.error("ABORT: Don't know how to process '{}' type file in: {}".format(ext, fname))
             sys.exit(1)
 
 
 if __name__=="__main__":
     import argparse
     import getpass
-    import os
 
     parser = argparse.ArgumentParser(description='Perform DRB-style rounding',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("files",
-                        type=str,
-                        nargs="+",
-                        help="File[s] to round")
-    parser.add_argument("--tab",
-                        action="store_true",
-                        help="CSV is tab delimited")
-    parser.add_argument("--highlight",
-                        action="store_true",
-                        help="Do not round spreadsheet values, only highlight")
-    parser.add_argument("--log",
-                        help="Invoke logfile rounder. This is the default for files ending in {}"
+    parser.add_argument("files", type=str, nargs="+", help="File[s] to round")
+    parser.add_argument("--tab",    action="store_true", help="CSV is tab delimited")
+    parser.add_argument("--highlight", action="store_true", help="Do not round spreadsheet values, only highlight")
+    parser.add_argument("--log", help="Invoke logfile rounder. This is the default for files ending in {}"
                         .format(" ".join(DRBRounder.LOGFILE_ROUNDER_EXTENSIONS)))
-    parser.add_argument("--counts",
-                        action='store_true',
-                        help="Apply rounding rules for small counts: 0-7 rounds to 4")
-    parser.add_argument("--zap",
-                        action='store_true',
-                        help="Overwrite output files")
+    parser.add_argument("--counts", action='store_true', help="Apply rounding rules for small counts: 0-7 rounds to 4")
+    parser.add_argument("--zap",    action='store_true', help="Overwrite output files")
 
     args = parser.parse_args()
     if args.tab == True:
@@ -337,10 +353,12 @@ if __name__=="__main__":
     else:
         args.delimiter = ","  # default delimiter
 
+    rounder_logger = setup_logger('rounder', os.getcwd() + '/rounder.log', '%(asctime)s:\t%(message)s', 'a', True)
+
     for fname in args.files:
-        rounder_logger.info("RUN: {} ran the rounder on '{}'"
-                                .format(getpass.getuser(), fname))
+        rounder_logger.info("RUN: {} ran the rounder on '{}'" .format(getpass.getuser(), fname))
+
         d = DRBRounder(args, fname)
         d.process()
-        rounder_logger.info("COMPLETE: {} ran the rounder on '{}'"
-                                .format(getpass.getuser(), fname))
+        rounder_logger.info("STATUS:   Logfile written to {}".format(d.logfile_path))
+        rounder_logger.info("COMPLETE: {} ran the rounder on '{}'" .format(getpass.getuser(), fname))

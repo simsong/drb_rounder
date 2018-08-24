@@ -6,11 +6,7 @@ import os
 import os.path
 
 from common import TEST_FILES_DIR,WORK_DIR,rm_Rf
-
 from helpers import *  # pylint: disable=W0614
-
-
-
 
 
 ################################################################
@@ -107,10 +103,12 @@ def test_convert_to_xlsx():
     Test the convert_to_xlsx function by checking whether the initial xls
     sheet has the same values as the xlsx sheet.
     """
+    if sys.platform != 'win32':
+        return
+
     import shutil
     import xlrd
     from openpyxl import load_workbook
-
 
     # Remove directory if it exists and create new working directory
     rm_Rf(WORK_DIR)

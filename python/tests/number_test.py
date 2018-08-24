@@ -21,7 +21,7 @@ rounding_info = {
     'has_commas': None,
     'in_scientific_form': None,
     'method': None,
-    'needs_rounding': None
+    'needed_rounding': None
 }
 
 
@@ -77,9 +77,9 @@ def test_reconstruct():
         ri['method'] = method[i]
         ri['in_scientific_form'] = in_scientific_form[i]
 
-        num = number.Number(ri, test_init=True)
+        num = number.Number(None)
+        num.init_for_testing(ri)
         num.reconstruct()
-
         assert num.rounded == rounded[i]
 
 
@@ -95,12 +95,12 @@ def test_round():
     # 6 current test cases
     original       = ["1234", "123,456", "(0.3456)", "(.12345678)", "/123.4567/", "1.2345e-5", "-1234"]
     rounded        = ["1200", "123,000", "(0.3456)", "(0.1235)   ", "/123.5/   ", "1.234E-05", "-1200"]
-    needs_rounding = [True, True, False, True, True, True, True, True]
+    needed_rounding = [True, True, False, True, True, True, True, True]
 
     for i in range(len(original)):
         num = number.Number(original[i])
         num.round()
 
         assert num.original == original[i]
-        assert num.needs_rounding == needs_rounding[i]
+        assert num.needed_rounding == needed_rounding[i]
         assert num.rounded == rounded[i]

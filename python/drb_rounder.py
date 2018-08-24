@@ -5,6 +5,9 @@
 # Includes both code that can be imported into other programs, as well
 # as a program that will round input files.
 
+# Note: the .xlsx files may not open properly on a Mac due to the fact that Anaconda packages an out-of-date xlsxwriter.
+# see: https://xlsxwriter.readthedocs.io/changes.html#changes
+
 import sys
 import os
 
@@ -12,7 +15,6 @@ import number
 import helpers
 import logging
 from helpers import LESS_THAN_15, ROUND4_METHOD, COUNTS_METHOD
-
 
 ################################################################
 ### Logging System
@@ -29,10 +31,7 @@ def setup_logger(name, log_file, format, log_mode, stream_handler):
     logger.setLevel(logging.INFO)
     if stream_handler:
         logger.addHandler(logging.StreamHandler())  # stderr
-
     return logger
-
-
 
 class DRBRounder:
     LOGFILE_ROUNDER_EXTENSIONS = ['.log', '.txt', '.sas', '.lst', '.tex', '.py', '.r']
@@ -183,9 +182,12 @@ class DRBRounder:
 
         # Apply rounding rules to all cells in spreadsheet
         wb = load_workbook(fname, data_only=True)  # Open the workbook
+        import openpyxl
+        openpyxl.writer.excel.save_workbook(wb,self.new_fname)
+        abort
+
         values_seen = 0
         values_rounded = 0
-        import numpy
         for sheetname in wb.sheetnames:
             sheet = wb.get_sheet_by_name(sheetname)
 

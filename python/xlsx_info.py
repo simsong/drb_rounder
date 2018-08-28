@@ -33,9 +33,6 @@ def colname(col):
     r2 = (col-26) % 26
     return colname(r1) + colname(r2)
 
-def improperly_rounded(val):
-    return SigFigStats.find_sigfigs(val) >= ALERT_DIGITS
-
 
 class ProblemStat:
     def __init__(self,*,sheet="",row="",col="",source="xls"):
@@ -63,6 +60,10 @@ class SigFigStats:
             return len(val)
         return 0                    # no significant figures if it can't be made scientific
 
+    @staticmethod
+    def improperly_rounded(val):
+        return SigFigStats.find_sigfigs(val) >= ALERT_DIGITS
+
     def __init__(self):
         self.max_row = 0
         self.max_col = 0
@@ -77,7 +78,7 @@ class SigFigStats:
         self.max_col = max(self.max_col, col)
         self.sig_digits_histogram[sigfigs] += 1
         self.count += 1
-        if improperly_rounded(val):
+        if SigFigStats.improperly_rounded(val):
             self.sig_digits_alerts[sigfigs].append(ProblemStat(row=row,col=col))
 
     def typeset(self,*,mode):
@@ -132,7 +133,7 @@ def analyze_xlsx(*,filename,mode=TEXT):
                     val = float(cell.value)
                 except (ValueError,TypeError,OverflowError) as e:
                     continue
-                if improperly_rounded(val):
+                if SigFigStats.improperly_rounded(val):
                     sb.add(val=val, row=cell.row+1, col=cell.column+1)
                     wssb.add(val=val, row=cell.row+1, col=cell.column+1)
                     improper_count += 1

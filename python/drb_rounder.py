@@ -88,7 +88,7 @@ class DRBRounder:
         self.fname = fname
         self.new_fname = os.path.splitext(fname)[0] + "_rounded.xlsx"
         self.logfile_path = os.path.splitext(fname)[0] + "_rounded.log"
-        if not args.zap:
+        if not self.args.zap:
             error = False
             for fn in [self.new_fname, self.logfile_path]:
                 if os.path.exists(fn) and not args.zap:

@@ -173,6 +173,9 @@ def analyze_csv(*,filename,mode=TEXT):
     ret += [sb.typeset(mode=mode)]
     return "\n".join(ret)
 
+def can_analyze_file(*,filename):
+    return filename.endswith(".xlsx") or filename.endswith(".csv")
+
 def analyze_file(*,filename,mode=TEXT):
     (base,ext) = os.path.splitext(filename)
     if ext=='.xlsx':

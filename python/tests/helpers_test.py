@@ -42,6 +42,14 @@ def test_find_next_number():
     assert find_next_number(" 1, ") == (1,2)
 
 
+def test_extract_number():
+    assert extract_number("3.0")=="3.0"
+    assert extract_number("[3.0]")=="3.0"
+    assert extract_number(" [3.0] ")=="3.0"
+    assert extract_number(" [3.0] ")=="3.0"
+    assert extract_number("3.0e10 ")=="3.0e10"
+    assert extract_number("3.0e-10 ")=="3.0e-10"
+
 def test_numbers_in_line():
     line = " 1 2 3,456 7.890"
     positions = [(1,2), (3,4), (5,10), (11,16)]

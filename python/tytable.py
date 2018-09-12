@@ -19,7 +19,9 @@ OPTION_CENTER = 'center'
 #
 # Some basic functions
 #
-
+import sys
+import os
+import traceback
 
 def line_end(mode):
     if mode==TEXT:
@@ -315,11 +317,21 @@ class ttable:
         " Add totals for the specified cols"
         self.cols = self.ncols()
         totals = [0] * self.cols
-        for r in self.data:
-            if r==self.HR or self.should_omit_row(r):
-                continue
-            for col in self.col_totals:
-                totals[col] += r[col]
+        try:
+            for r in self.data:
+                if self.should_omit_row(r):
+                    continue
+                if r==self.HR:
+                    continue        # can't total HRs
+                for col in self.col_totals:
+                    if r[col]=='': continue
+                    totals[col] += r[col]
+        except (ValueError,TypeError) as e:
+            print("*** Table cannot be totaled",file=sys.stderr)
+            for row in self.data:
+                print(row.data,file=sys.stderr)
+            traceback.print_tb()
+            return
         row = ["Total"]
         for col in range(1,self.cols):
             if col in self.col_totals:

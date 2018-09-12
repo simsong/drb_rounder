@@ -27,6 +27,7 @@ ALERT_VALUES = 10               # alert on this many values
 def colname(col):
     assert 0<=col<=26+26*26     # only handles 1 and 2 character cols
 
+    col -= 1                    # column 0 is A
     if col<26:
         return chr( ord("A") + col)
     r1 = (col-26) // 26
@@ -43,6 +44,19 @@ class ProblemStat:
         self.row   = row
         self.col   = col
         self.source  = source
+
+    def __lt__(self,v):
+        if self.row < v.row: return True
+        if self.row > v.row: return False
+        if self.col < v.col: return True
+        return False
+        
+    def __le__(self,v):
+        if self.row <= v.row: return True
+        if self.row > v.row: return False
+        if self.col <= v.col: return True
+        return False
+        
     def __str__(self):
         if self.source=="xls":
             if self.sheet:
@@ -69,6 +83,7 @@ class SigFigStats:
         self.sig_digits_histogram = defaultdict(int) # count
         self.sig_digits_alerts    = defaultdict(list)
         self.count = 0
+        self.improper_count = 0
 
     def add(self,*, val, row, col):
         """Adds a number to the counter and return True if it has more than ALERT_DIGITS significant figures"""
@@ -78,6 +93,7 @@ class SigFigStats:
         self.sig_digits_histogram[sigfigs] += 1
         self.count += 1
         if improperly_rounded(val):
+            self.improper_count += 1
             self.sig_digits_alerts[sigfigs].append(ProblemStat(row=row,col=col))
 
     def typeset(self,*,mode):
@@ -87,12 +103,16 @@ class SigFigStats:
         t.add_head(['Significant Digits','Cell count','Problem cells'])
         t.set_latex_colspec("rrl")
         t.set_col_alignment(1,ttable.CENTER)
-        for (key,val) in sorted(self.sig_digits_histogram.items()):
-            alerts = " ".join( str(alert) for alert in self.sig_digits_alerts[key][0:ALERT_VALUES])
-            if len(self.sig_digits_alerts[key]) >= ALERT_VALUES:
-                alerts += r" \dots"
-            t.add_data( (key,val,alerts) )
-        return t.typeset(mode=mode)
+        for (sig_digs,vals) in sorted(self.sig_digits_alerts.items()):
+            alert_cells = sorted(vals)[0:ALERT_VALUES]
+            alerts = " ".join( [str(a) for a in alert_cells])
+            if len(alert_cells) >= ALERT_VALUES:
+                alerts += r" . . . "
+            t.add_data( (sig_digs,len(vals),alerts) )
+        if t.data:
+            return t.typeset(mode=mode)
+        else:
+            return ""
     
 def analyze_xlsx(*,filename,mode=TEXT):
     """Analyze the named excel spreadsheet and return a string in the specified format."""
@@ -113,18 +133,19 @@ def analyze_xlsx(*,filename,mode=TEXT):
         return "".join(ret)
 
     tt = ttable()
-    tt.add_head(['','Worksheet Name','rows with data','columns with data',
+    tt.add_head(['',
+                 'Worksheet Name','rows with data','columns with data',
                  'total numeric values','cells with $>4$ sigfigs'])
     
-    sb = SigFigStats()              # for all the worksheets
     for i in range(len(wb.worksheets)):
-        ws = wb.worksheets[i]
-        wssb = SigFigStats()              # for this worksheet
+        ws   = wb.worksheets[i]
+        sb_ws = SigFigStats()              # for this worksheet
         
-        improper_count = 0
+        empty_cells = 0
         for row in ws.iter_rows():
             for cell in row:
                 if isinstance(cell,EmptyCell):
+                    empty_cells += 1
                     continue
                 try:
                     if cell.value==None:
@@ -132,19 +153,15 @@ def analyze_xlsx(*,filename,mode=TEXT):
                     val = float(cell.value)
                 except (ValueError,TypeError,OverflowError) as e:
                     continue
-                if improperly_rounded(val):
-                    sb.add(val=val, row=cell.row+1, col=cell.column+1)
-                    wssb.add(val=val, row=cell.row+1, col=cell.column+1)
-                    improper_count += 1
-        tt.add_data([i+1,latex_escape(ws.title),wssb.max_row,wssb.max_col,wssb.count, improper_count])
+                sb_ws.add(val=val, row=cell.row, col=cell.column)
+        ret += ["Worksheet "+ws.title] + [""] + [sb_ws.typeset(mode=mode)]
+        tt.add_data([i+1,latex_escape(ws.title),sb_ws.max_row,sb_ws.max_col,sb_ws.count, sb_ws.improper_count])
         # End of worksheet processing
-    tt.add_data(tt.HR)
-    tt.add_data(['total','--','--','--',sb.count])
-    ret += [tt.typeset(mode=mode)]
-    ret += [sb.typeset(mode=mode)]
+
+    tt.set_col_totals([4,5])
+    ret = [tt.typeset(mode=mode)] + ret + [""]
 
     # count the number of numbers and their precision
-    ret.append(NL)
     return "\n".join(ret)
 
 def analyze_csv(*,filename,mode=TEXT):
@@ -172,6 +189,9 @@ def analyze_csv(*,filename,mode=TEXT):
     ret += ["rows: {}  columns: {}  numbers: {}".format(sb.max_row,sb.max_col,sb.count),NL]
     ret += [sb.typeset(mode=mode)]
     return "\n".join(ret)
+
+def can_analyze_file(*,filename):
+    return filename.endswith(".xlsx") or filename.endswith(".csv")
 
 def analyze_file(*,filename,mode=TEXT):
     (base,ext) = os.path.splitext(filename)
@@ -201,13 +221,22 @@ if __name__=="__main__":
     parser = ArgumentParser( formatter_class = ArgumentDefaultsHelpFormatter )
     parser.add_argument("file",help="file to analyze")
     parser.add_argument("--test", help="Test a file by making minor modificaitons to it.", action='store_true')
+    parser.add_argument("--debug", action='store_true')
+    parser.add_argument("--text", action='store_true')
+    parser.add_argument("--latex", action='store_true')
     args = parser.parse_args()
 
     if args.test:
         mytest_annotate(args.file)
         exit(1)
 
-    for mode in [TEXT,LATEX]:
-        print("============== {} ==============".format(mode))
-        print(analyze_file(filename=args.file,mode=mode))
+    if not args.text and not args.latex:
+        args.text = True
+
+    if args.text:
+        print(analyze_file(filename=args.file,mode=TEXT))
+        print("")
+
+    if args.latex:
+        print(analyze_file(filename=args.file,mode=LATEX))
         print("")

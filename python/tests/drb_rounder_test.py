@@ -44,7 +44,8 @@ def test_process_csv():
             for line in infile:
                 fields = line.split(delimiter)
                 for field in fields:
-                    new_field = ''.join(i for i in field if i.isdigit() or i=='.' or i=='<')  # strip everything but digits and periods and <
+                    # strip everything but digits and periods and <
+                    new_field = ''.join(i for i in field if i.isdigit() or i=='.' or i=='<')  
                     if new_field != '':
                         result.append(new_field)
         return result

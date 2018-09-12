@@ -11,6 +11,7 @@ from openpyxl.cell.read_only import EmptyCell
 from collections import defaultdict
 import zipfile
 import tytable
+from helpers import extract_number
 from tytable import ttable, HTML, TEXT, LATEX
 
 from latex_tools import latex_escape, textbf, nl
@@ -112,34 +113,89 @@ class SigFigStats:
         if t.data:
             return t.typeset(mode=mode)
         else:
-            return ""
+            return f"Cells: {self.count}; nothing improperly rounded."
     
-def analyze_xlsx(*,filename,mode=TEXT):
+def get_number(s):
+    try:
+        return float(s)
+    except (ValueError,TypeError):
+        pass
+    try:
+        return float(extract_number(s))
+    except (ValueError,TypeError):
+        pass
+    return None
+
+# A tool for reading CSV files that matches the openpyxl interface
+class CSVCell:
+    def __init__(self,rownumber,column,value):
+        self.row    = rownumber
+        self.column = column
+        self.value   = value
+    def __str__(self):
+        return f"<CSVCell {self.row},{self.column},{self.value}>"
+
+import csv
+class CSVFile:
+    def __init__(self,fname):
+        import csv
+        self.fname = fname
+        self.title = os.path.basename(fname)
+
+    def iter_rows(self):
+        """Return an iterator that is an array of cells"""
+        with open(self.fname,"r") as csvfile:
+            linenumber = 0
+            for row in csv.reader(csvfile, delimiter=','):
+                linenumber += 1
+                ret = []
+                for column in range(len(row)):
+                    ret.append( CSVCell(rownumber=linenumber,column=column+1,value=row[column]) )
+                yield ret
+                
+
+class CSVWorkbook:
+    def __init__(self,filename):
+        self.worksheets = [CSVFile(filename)]
+        self.active     = self.worksheets[0]
+    
+def load_csv_workbook(*,filename,read_only=True):
+    assert read_only==True
+    return CSVWorkbook(filename)
+        
+
+
+def analyze_file(*,filename,mode=TEXT):
     """Analyze the named excel spreadsheet and return a string in the specified format."""
-    ret = []                    # an array of strings to be joined and returned
     NL = tytable.line_end(mode)
+    ret = [NL]                   # an array of strings to be joined and returned
     if mode==TEXT:
         ret += [filename,'\n',"="*len(filename),NL]
     elif mode==LATEX:
         ret += [textbf(latex_escape(filename+":")),NL]
         
-    try:
-        wb = load_workbook(filename=filename, read_only=True)
-    except zipfile.BadZipFile:
-        ret += ['Cannot read; badZipFile',NL]
-        return "".join(ret)
-    except TypeError:
-        ret += ['Cannot read; bad Excel File',NL]
-        return "".join(ret)
+    if filename.lower().endswith(".csv"):
+        wb = load_csv_workbook(filename=filename)
+    elif filename.lower().endswith(".xlsx"):
+        try:
+            wb = load_workbook(filename=filename, read_only=True)
+        except zipfile.BadZipFile:
+            ret += ['Cannot read; badZipFile',NL]
+            return "".join(ret)
+        except TypeError:
+            ret += ['Cannot read; bad Excel File',NL]
+            return "".join(ret)
+    else:
+        return "Cannot read file type: {}".format(filename)
 
     tt = ttable()
-    tt.add_head(['',
-                 'Worksheet Name','rows with data','columns with data',
+    tt.add_head(['Worksheet Name','rows with data','columns with data',
                  'total numeric values','cells with $>4$ sigfigs'])
     
-    for i in range(len(wb.worksheets)):
-        ws   = wb.worksheets[i]
-        sb_ws = SigFigStats()              # for this worksheet
+    ret_worksheets = []
+    for ws in wb.worksheets:
+        print(f"  Analyzing {os.path.basename(filename)} worksheet {ws.title}")
+        sf_ws = SigFigStats()              # for this worksheet
         
         empty_cells = 0
         for row in ws.iter_rows():
@@ -147,59 +203,24 @@ def analyze_xlsx(*,filename,mode=TEXT):
                 if isinstance(cell,EmptyCell):
                     empty_cells += 1
                     continue
-                try:
-                    if cell.value==None:
-                        continue
-                    val = float(cell.value)
-                except (ValueError,TypeError,OverflowError) as e:
-                    continue
-                sb_ws.add(val=val, row=cell.row, col=cell.column)
-        ret += ["Worksheet "+ws.title] + [""] + [sb_ws.typeset(mode=mode)]
-        tt.add_data([i+1,latex_escape(ws.title),sb_ws.max_row,sb_ws.max_col,sb_ws.count, sb_ws.improper_count])
+                val = get_number(cell.value)
+                if val!=None:
+                    sf_ws.add(val=val, row=cell.row, col=cell.column)
+        ret_worksheets += ["Worksheet "+latex_escape(ws.title)]
+        ret_worksheets += [sf_ws.typeset(mode=mode)]
+        ret_worksheets += ["rows: {}  columns: {}  numbers: {}".format(sf_ws.max_row,sf_ws.max_col,sf_ws.count)]
+        ret_worksheets += [""]
+        tt.add_data([latex_escape(ws.title),sf_ws.max_row,sf_ws.max_col,sf_ws.count, sf_ws.improper_count])
         # End of worksheet processing
 
-    tt.set_col_totals([4,5])
-    ret = [tt.typeset(mode=mode)] + ret + [""]
+    tt.set_col_totals([3,4])
+    ret += [tt.typeset(mode=mode)] + [NL] + ret_worksheets
 
     # count the number of numbers and their precision
-    return "\n".join(ret)
-
-def analyze_csv(*,filename,mode=TEXT):
-    """Analyze the numbers in a text file"""
-    ret = []
-    NL = tytable.line_end(mode)
-    if mode==TEXT:
-        ret += [filename,'\n',"="*len(filename),NL]
-    elif mode==LATEX:
-        ret += [textbf(latex_escape(filename+":")),NL]
-    div = re.compile("[ ,]")
-    sb = SigFigStats()
-    with open(filename,"r") as f:
-        row_number = 0
-        for line in f:
-            row_number += 1
-            col_number = 0     
-            for word in div.split(line):
-                try:
-                    val = float(word)
-                    sb.add(val=val,row=row_number,col=col_number)
-                except (ValueError,TypeError,OverflowError) as e:
-                    pass
-                col_number += 1
-    ret += ["rows: {}  columns: {}  numbers: {}".format(sb.max_row,sb.max_col,sb.count),NL]
-    ret += [sb.typeset(mode=mode)]
-    return "\n".join(ret)
+    return NL.join(ret)
 
 def can_analyze_file(*,filename):
-    return filename.endswith(".xlsx") or filename.endswith(".csv")
-
-def analyze_file(*,filename,mode=TEXT):
-    (base,ext) = os.path.splitext(filename)
-    if ext=='.xlsx':
-        return analyze_xlsx(filename=filename,mode=mode)
-    elif ext=='.csv':
-        return analyze_csv(filename=filename,mode=mode)
-    raise RuntimeError("{}: Unknown file type: {}".format(filename,ext))
+    return filename.lower().endswith(".xlsx") or filename.lower().endswith(".csv")
 
 def mytest_annotate(fname):
     from openpyxl import load_workbook

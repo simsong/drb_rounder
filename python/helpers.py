@@ -38,7 +38,7 @@ values_logger = setup_logger('values', os.getcwd() + '/rounded_values.log',
 ### String manipulation code
 ################################################################
 # This regular expression matches for any legitimate integer or float which may
-# or may not contain commas
+# or may not contain commas. It does not match negative numbers or scientific notation.
 number_re = re.compile(r"(([.]\d+)|((\d{1,3}(,\d{3})+)|(\d+))([.]\d*)?)")
 def find_next_number(line, pos=0):
     """
@@ -50,6 +50,18 @@ def find_next_number(line, pos=0):
         span = m.span()
         return (span[0]+pos,span[1]+pos)
 
+number2_re = re.compile(r"(-?([.]\d+)|((\d{1,3}(,\d{3})+)|(\d+))([.]\d*)?([eE][-+]?\d+)?)")
+def extract_number(line):
+    """
+    Extract the number from the line, if there is any, removing commas
+    """
+    m = number2_re.search(line)
+    if m:
+        number = m.group(1).replace(",","")
+        return number
+    return None
+        
+        
 
 def numbers_in_line(line):
     """ Returns an array with all of the numbers in the line """

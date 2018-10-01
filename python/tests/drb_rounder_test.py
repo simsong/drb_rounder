@@ -15,6 +15,8 @@ INFILES=[ ("concentration_stats.xlsx","concentration_stats_rounded.xlsx") ]
 
 from common import *
 
+DRB_ROUNDER_PY = os.path.join(os.path.basename(__file__), "../drb_rounder.py")
+
 
 def test_process_csv():
     """
@@ -60,10 +62,11 @@ def test_process_csv():
     assert read_csv(FNAME_TAB, "\t") == TAB_ORIGINALS
     
     # Run the rounder on both files
-    assert os.path.exists(DRB_ROUNDER_PY)
-    r = call([sys.executable,DRB_ROUNDER_PY,'--zap','--tab',FNAME_COMMA])
-    assert r==0
-    assert read_csv(FNAME_COMMA_ROUNDED, ",") == COMMA_ROUNDED
+    call([sys.executable,
+    c = DRBRounder(argparse.ArgumentParser(), FNAME_COMMA)
+    c.args.delimiter = ","
+    c.args.zap = False
+    c.process_csvfile()
 
 
     assert os.path.exists(DRB_ROUNDER_PY)

@@ -145,6 +145,8 @@ class DRBRounder:
                     for field in fields:
                         num = number.Number(field)
                         num.round()
+                        if args.debug:
+                            print("{} -> {}".format(field,num.rounded))
                         if num.needed_rounding:
                             self.values_logger.info("line %d  %s --> %s",line_number,num.original,num.rounded)
                             rounded_fields.append(num.rounded)
@@ -375,6 +377,7 @@ if __name__=="__main__":
                         .format(" ".join(DRBRounder.LOGFILE_ROUNDER_EXTENSIONS)))
     parser.add_argument("--counts", action='store_true', help="Apply rounding rules for small counts: 0-7 rounds to 4")
     parser.add_argument("--zap",    action='store_true', help="Overwrite output files")
+    parser.add_argument("--debug",  action='store_true', help='add debugging output')
 
     args = parser.parse_args()
     if args.tab == True:

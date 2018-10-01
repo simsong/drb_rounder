@@ -23,6 +23,9 @@ class Number:
         self.method = method
         self.needed_rounding = None
 
+    def __repr__(self):
+        return "<Number:"+self.original+">"
+
     def init_for_testing(self, rounding_info):
         self.original = rounding_info['original']
         self.original_cleaned = rounding_info['original_cleaned']
@@ -161,4 +164,4 @@ class Number:
         else:
             self.needed_rounding = self.original != self.rounded
 
-        return
+        return self.rounded

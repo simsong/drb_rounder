@@ -6,16 +6,21 @@ import shutil
 
 from subprocess import call
 
-DRB_ROUNDER_PY= os.path.join(os.path.dirname(__file__),"../drb_rounder.py")
-INFILES=[ ("concentration_stats.xlsx","concentration_stats_rounded.xlsx") ] 
-
 #
 # Common tests for the DRB_ROUNDER
-
+#
 
 from common import *
 
-DRB_ROUNDER_PY = os.path.join(os.path.basename(__file__), "../drb_rounder.py")
+sys.path.append( os.path.join(os.path.dirname(__file__),".."))
+
+from number import Number
+
+
+DRB_ROUNDER_PY= os.path.join(os.path.dirname(__file__),"../drb_rounder.py")
+INFILES=[ ("concentration_stats.xlsx","concentration_stats_rounded.xlsx") ] 
+
+
 
 
 def test_process_csv():
@@ -40,6 +45,16 @@ def test_process_csv():
     TAB_ORIGINALS   = ["10", "22", "6700.32", "500932", "1007382", "55.2"]
     TAB_ROUNDED     = ["<15", "20", "6700.", "501000", "1007000", "55.2"]
 
+    # First, make sure that each of these get rounded as expected.
+    for i in range(len(COMMA_ORIGINALS)):
+        n = Number( COMMA_ORIGINALS[i] )
+        assert n.round().strip() == COMMA_ROUNDED[i].strip()
+
+    for i in range(len(TAB_ORIGINALS)):
+        n = Number( TAB_ORIGINALS[i] )
+        assert n.round().strip() == TAB_ROUNDED[i].strip()
+
+
     prep_workdir()
 
     def read_csv(fname, delimiter):
@@ -47,8 +62,10 @@ def test_process_csv():
         Place all the digits inside a csv file into a list
         """
         result = []
+        print("reading: ",fname)
         with open( fname,  "rU") as infile:
             for line in infile:
+                print(line.strip())
                 fields = line.split(delimiter)
                 for field in fields:
                     # strip everything but digits and periods and <
@@ -62,15 +79,14 @@ def test_process_csv():
     assert read_csv(FNAME_TAB, "\t") == TAB_ORIGINALS
     
     # Run the rounder on both files
-    call([sys.executable,
-    c = DRBRounder(argparse.ArgumentParser(), FNAME_COMMA)
-    c.args.delimiter = ","
-    c.args.zap = False
-    c.process_csvfile()
+    assert os.path.exists(DRB_ROUNDER_PY)
+    r = call([sys.executable,DRB_ROUNDER_PY,'--zap',FNAME_COMMA])
+    assert r==0
+    assert read_csv(FNAME_COMMA_ROUNDED, ",") == COMMA_ROUNDED
 
 
     assert os.path.exists(DRB_ROUNDER_PY)
-    r =call([sys.executable,DRB_ROUNDER_PY,'--zap',FNAME_TAB])
+    r = call([sys.executable,DRB_ROUNDER_PY,'--zap','--tab',FNAME_TAB])
     assert r==0
     assert read_csv(FNAME_TAB_ROUNDED,  "\t") == TAB_ROUNDED
 

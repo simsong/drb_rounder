@@ -16,6 +16,10 @@ import helpers
 import logging
 from helpers import LESS_THAN_15, ROUND4_METHOD, COUNTS_METHOD
 
+def exists_notempty(fn):
+    """Return True if the exists and is not empty"""
+    return os.path.exists(fn) and (os.path.getsize(fn)>0)
+
 ################################################################
 ### Logging System
 ################################################################
@@ -83,16 +87,20 @@ class DRBRounder:
     </table>
     """
 
-    def __init__(self, args, fname):
+    def __init__(self, *, fname, args=None, overwrite=False):
+        # Note that the output logfile is in _rounding.log and not _rounded.log, otherwise 
+        # we get a name collision if a file ending in '.log' is rounded.
+
         self.args  = args
         self.fname = fname
         self.new_fname = os.path.splitext(fname)[0] + "_rounded.xlsx"
-        self.logfile_path = os.path.splitext(fname)[0] + "_rounded.log"
-        if not args.zap:
+        self.logfile_path = os.path.splitext(fname)[0] + "_rounding.log"
+        self.overwrite  = overwrite
+        if not self.overwrite:
             error = False
             for fn in [self.new_fname, self.logfile_path]:
-                if os.path.exists(fn) and not args.zap:
-                    rounder_logger.error("Error: %s exists. Delete file or add --zap option", fn)
+                if exists_notempty(fn):
+                    logging.error("Error: %s exists. Delete file or add --zap option", fn)
                     error = True
             if error:
                 exit(1)
@@ -111,7 +119,9 @@ class DRBRounder:
 
         # Open infile/outfile and begin performing rounding rules
         with open(self.fname, "rU") as infile:
-            with helpers.safe_open(outfilename, "w", zap=self.args.zap) as outfile:
+            if exists_notempty(outfilename) and not self.overwrite:
+                logger.error("ABORT: %s exists. Please delete or specify --zap",outfilename)
+            with open(outfilename, "w") as outfile:
                 for line in infile:
                     stripped_line = line.rstrip()  # remove EOL
                     eol_len = len(line) - len(stripped_line)
@@ -124,9 +134,9 @@ class DRBRounder:
 
                     # Check to make sure delimiter is seen
                     if delimiter not in stripped_line:
-                        rounder_logger.info("\tNo delimiter found in line {}: {}".format(line_number, stripped_line))
+                        logging.info("\tNo delimiter found in line {}: {}".format(line_number, stripped_line))
                         if " " in stripped_line:
-                            rounder_logger.info("\tUsing space as delimiter for this line")
+                            logging.info("\tUsing space as delimiter for this line")
                             delimiter = " "
 
                     # Split by delimiter and round all items
@@ -165,7 +175,7 @@ class DRBRounder:
 
         # Make sure the excel spreadsheet exists
         if not os.path.exists(fname):
-            rounder_logger.error('ABORT: Excel spreadsheet does not exist')
+            logging.error('ABORT: Excel spreadsheet does not exist')
             sys.exit(1)
 
         # Convert the workbook if needed
@@ -176,7 +186,7 @@ class DRBRounder:
 
         # Make sure no formulas exist in the spreadsheet
         if helpers.check_for_excel_formulas(fname):
-            rounder_logger.error('ABORT: Excel spreadsheet contains formulas. '
+            logging.error('ABORT: Excel spreadsheet contains formulas. '
                                  'Please remove the formulas in the highlighted cells')
             sys.exit(1)
 
@@ -184,7 +194,6 @@ class DRBRounder:
         wb = load_workbook(fname, data_only=True)  # Open the workbook
         import openpyxl
         openpyxl.writer.excel.save_workbook(wb,self.new_fname)
-        abort
 
         values_seen = 0
         values_rounded = 0
@@ -236,28 +245,30 @@ class DRBRounder:
         # Save the rounded calculations to a new file
         try:
             wb.save(self.new_fname)
-            rounder_logger.info("STATUS:   New spreadsheet written to %s",self.new_fname)
+            logging.info("STATUS:   New spreadsheet written to %s",self.new_fname)
         except PermissionError:
-            rounder_logger.error('ABORT: Could not save. Please close rounded spreadsheet')
+            logging.error('ABORT: Could not save. Please close rounded spreadsheet')
             exit(1)
 
     def process_logfile(self):
         # Make sure that our intended output files do not exist
         (name, ext) = os.path.splitext(self.fname)
         fname_rounded = name + "_rounded" + ext
-        frounded = helpers.safe_open(fname_rounded, "w", return_none=True, zap=args.zap)
-
-        # before - highlight items that need rounding
         fname_before = name + "_0.html"
-        fbefore = helpers.safe_open(fname_before, "w", return_none=True, zap=args.zap)
-
-        # after - show it rounded
         fname_after = name + "_1.html"
-        fafter = helpers.safe_open(fname_after, "w", return_none=True, zap=args.zap)
+        if not args.overwrite:
+            abort = False
+            for fn in [fname_rounded,fname_before,fname_after]:
+                if exists_notempty(fn):
+                    logger.error("%s exists. Please delete file and continue",fn)
+                    abort = True
+            if abort:
+                logger.error("ABORT")
+                exit(1)
 
-        if (not frounded) or (not fbefore) or (not fafter):
-            rounder_logger.error('ABORT: Could not open log and html files')
-            sys.exit(1)
+        frounded = open(fname_rounded, "w")
+        fbefore  = open(fname_before, "w")
+        fafter   = open(fname_after, "w")
 
         fbefore.write(self.HTML_HEADER)
         fafter.write(self.HTML_HEADER)
@@ -347,7 +358,7 @@ class DRBRounder:
         elif ext in self.LOGFILE_ROUNDER_EXTENSIONS:
             self.process_logfile()
         else:
-            rounder_logger.error("ABORT: Don't know how to process '{}' type file in: {}".format(ext, fname))
+            logging.error("ABORT: Don't know how to process '{}' type file in: {}".format(ext, fname))
             sys.exit(1)
 
 
@@ -372,12 +383,12 @@ if __name__=="__main__":
         args.delimiter = ","  # default delimiter
 
     # rounder_log is the logfile for all uses of the rounder. 
-    rounder_logger = setup_logger('rounder', os.getcwd() + '/rounder.log', '%(asctime)s:\t%(message)s', 'a', True)
+    setup_logger(None, os.getcwd() + '/rounder.log', '%(asctime)s:\t%(message)s', 'a', True)
 
     for fname in args.files:
-        rounder_logger.info("RUN: {} ran the rounder on '{}'" .format(getpass.getuser(), fname))
+        logging.info("RUN: {} ran the rounder on '{}'" .format(getpass.getuser(), fname))
 
-        d = DRBRounder(args, fname)
+        d = DRBRounder(args=args, fname=fname, overwrite=args.zap)
         d.process()
-        rounder_logger.info("STATUS:   Logfile written to {}".format(d.logfile_path))
-        rounder_logger.info("COMPLETE: {} ran the rounder on '{}'" .format(getpass.getuser(), fname))
+        logging.info("STATUS:   Logfile written to {}".format(d.logfile_path))
+        logging.info("COMPLETE: {} ran the rounder on '{}'" .format(getpass.getuser(), fname))

@@ -4,12 +4,16 @@ import os
 import os.path
 import shutil
 
+from subprocess import call
+
+DRB_ROUNDER_PY= os.path.join(os.path.dirname(__file__),"../drb_rounder.py")
+INFILES=[ ("concentration_stats.xlsx","concentration_stats_rounded.xlsx") ] 
+
 #
 # Common tests for the DRB_ROUNDER
 
 
 from common import *
-from drb_rounder import *  # pylint: disable=W0614
 
 
 def test_process_csv():
@@ -29,8 +33,9 @@ def test_process_csv():
     FNAME_COMMA_ROUNDED = os.path.join(WORK_DIR, "test_comma_rounded.csv")
     FNAME_TAB_ROUNDED   = os.path.join(WORK_DIR, "test_tab_rounded.csv")
     COMMA_ORIGINALS = ["41", "74.0", "170.1111111", "142", "689", "16612.832", "32.6", "7003200", "15", "10032", "0.5", "167"]
+    COMMA_ROUNDED   = ["40", "74.0", "170.1",       "150", "700", "16610.",    "32.6", "7003000", "20", "10000", "0.5", "150"]
+
     TAB_ORIGINALS   = ["10", "22", "6700.32", "500932", "1007382", "55.2"]
-    COMMA_ROUNDED   = ["40", "74.0", "170.1", "150", "700", "16610.", "32.6", "7003000", "20", "10000", "0.5", "150"]
     TAB_ROUNDED     = ["<15", "20", "6700.", "501000", "1007000", "55.2"]
 
     prep_workdir()
@@ -54,24 +59,16 @@ def test_process_csv():
     assert read_csv(FNAME_COMMA, ",") == COMMA_ORIGINALS
     assert read_csv(FNAME_TAB, "\t") == TAB_ORIGINALS
     
-    # Make sure rounded files are deleted
-    for fn in [FNAME_COMMA_ROUNDED, FNAME_TAB_ROUNDED]:
-        if os.path.exists(fn):
-            os.unlink(fn)
-
     # Run the rounder on both files
-    c = DRBRounder(argparse.ArgumentParser(), FNAME_COMMA)
-    c.args.delimiter = ","
-    c.args.zap = False
-    c.process_csvfile()
-
-    t = DRBRounder(argparse.ArgumentParser(), FNAME_TAB)
-    t.args.delimiter = "\t"
-    t.args.zap = False
-    t.process_csvfile()
-
-    # Make sure the output of both .csv files are what we expect
+    assert os.path.exists(DRB_ROUNDER_PY)
+    r = call([sys.executable,DRB_ROUNDER_PY,'--zap','--tab',FNAME_COMMA])
+    assert r==0
     assert read_csv(FNAME_COMMA_ROUNDED, ",") == COMMA_ROUNDED
+
+
+    assert os.path.exists(DRB_ROUNDER_PY)
+    r =call([sys.executable,DRB_ROUNDER_PY,'--zap',FNAME_TAB])
+    assert r==0
     assert read_csv(FNAME_TAB_ROUNDED,  "\t") == TAB_ROUNDED
 
 
@@ -129,8 +126,8 @@ def test_process_xlsx():
     wb.save(EXCEL_FN)
 
     # Run the rounder
-    d = DRBRounder(None, EXCEL_FN)
-    d.process_xlsx(is_xlsx=True)
+    r = call([sys.executable,DRB_ROUNDER_PY,'--zap',EXCEL_FN])
+    assert r==0
 
     # Load Workbook
     wb = load_workbook(ROUNDED_EXCEL_FN, data_only=True)
@@ -172,10 +169,7 @@ def test_process_xlsx():
     assert ws['A2'].comment == COMMENT_INTEGER
     assert ws['C2'].comment == COMMENT_FLOAT
 
-    wb.save(ROUNDED_EXCEL_FN)
 
-
-INFILES=[ ("concentration_stats.xlsx","concentration_stats_rounded.xlsx") ] 
 
 def test_files():
     """For specific files, run the rounder on them and verify the results."""
@@ -183,4 +177,5 @@ def test_files():
     for (infile,outfile) in INFILES:
         infile_path = os.path.join(WORK_DIR, infile)
         assert os.path.exists(infile_path)
-        res = call([sys.executable,DRB_ROUNDER, infile_path])
+        assert os.path.exists(DRB_ROUNDER_PY)
+        res = call([sys.executable,DRB_ROUNDER_PY, '--zap',infile_path])

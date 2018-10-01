@@ -126,6 +126,15 @@ def get_number(s):
         pass
     return None
 
+################################################################
+###
+### CSVFile:
+###
+### Read a CSV file like a .xlsx file
+###
+################################################################
+
+import csv
 # A tool for reading CSV files that matches the openpyxl interface
 class CSVCell:
     def __init__(self,rownumber,column,value):
@@ -135,7 +144,7 @@ class CSVCell:
     def __str__(self):
         return f"<CSVCell {self.row},{self.column},{self.value}>"
 
-import csv
+
 class CSVFile:
     def __init__(self,fname):
         import csv

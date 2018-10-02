@@ -45,7 +45,7 @@ This will produce three output files:
   * `filename_rounded.log` --- The file with the rounded data
   * `filename_0.html` --- An HTML file showing the original data, with
   annotations on the values that require rounding.
-  * `filename_1`.html`--- An HTML file showing the rounded data, with
+  * `filename_1.html`--- An HTML file showing the rounded data, with
   annotations to indicate what was rounded.
 
 If you open both of the HTML files in different tabs of a web browser, you can

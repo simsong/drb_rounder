@@ -26,17 +26,13 @@ ALERT_DIGITS = 5                # alert if this many digits or more
 ALERT_VALUES = 10               # alert on this many values
 
 def colname(col):
-    assert 0<=col<=26+26*26     # only handles 1 and 2 character cols
+    assert 0<=col<=26+26*26     # only handles 1 and 2 character cols. Col 0 is 'A'
 
-    col -= 1                    # column 0 is A
     if col<26:
         return chr( ord("A") + col)
     r1 = (col-26) // 26
     r2 = (col-26) % 26
     return colname(r1) + colname(r2)
-
-def improperly_rounded(val):
-    return SigFigStats.find_sigfigs(val) >= ALERT_DIGITS
 
 
 class ProblemStat:
@@ -78,13 +74,16 @@ class SigFigStats:
             return len(val)
         return 0                    # no significant figures if it can't be made scientific
 
+    @staticmethod
+    def improperly_rounded(val):
+        return SigFigStats.find_sigfigs(val) >= ALERT_DIGITS
+
     def __init__(self):
         self.max_row = 0
         self.max_col = 0
         self.sig_digits_histogram = defaultdict(int) # count
         self.sig_digits_alerts    = defaultdict(list)
         self.count = 0
-        self.improper_count = 0
 
     def add(self,*, val, row, col):
         """Adds a number to the counter and return True if it has more than ALERT_DIGITS significant figures"""
@@ -93,9 +92,11 @@ class SigFigStats:
         self.max_col = max(self.max_col, col)
         self.sig_digits_histogram[sigfigs] += 1
         self.count += 1
-        if improperly_rounded(val):
-            self.improper_count += 1
+        if self.improperly_rounded(val):
             self.sig_digits_alerts[sigfigs].append(ProblemStat(row=row,col=col))
+
+    def improper_count(self):
+        return sum([len(alert) for alert in self.sig_digits_alerts.values()])
 
     def typeset(self,*,mode):
         if not self.count:
@@ -219,7 +220,7 @@ def analyze_file(*,filename,mode=TEXT):
         ret_worksheets += [sf_ws.typeset(mode=mode)]
         ret_worksheets += ["rows: {}  columns: {}  numbers: {}".format(sf_ws.max_row,sf_ws.max_col,sf_ws.count)]
         ret_worksheets += [""]
-        tt.add_data([latex_escape(ws.title),sf_ws.max_row,sf_ws.max_col,sf_ws.count, sf_ws.improper_count])
+        tt.add_data([latex_escape(ws.title),sf_ws.max_row,sf_ws.max_col,sf_ws.count, sf_ws.improper_count()])
         # End of worksheet processing
 
     tt.set_col_totals([3,4])

@@ -4,8 +4,7 @@ import os
 import os.path
 import shutil
 
-from subprocess import call
-
+import subprocess
 #
 # Common tests for the DRB_ROUNDER
 #
@@ -22,6 +21,7 @@ INFILES=[ ("concentration_stats.xlsx","concentration_stats_rounded.xlsx") ]
 
 
 
+DRB_ROUNDER_PY = os.path.join( os.path.dirname(__file__), "../drb_rounder.py")
 
 def test_process_csv():
     """
@@ -42,8 +42,8 @@ def test_process_csv():
     COMMA_ORIGINALS = ["41", "74.0", "170.1111111", "142", "689", "16612.832", "32.6", "7003200", "15", "10032", "0.5", "167"]
     COMMA_ROUNDED   = ["40", "74.0", "170.1",       "150", "700", "16610.",    "32.6", "7003000", "20", "10000", "0.5", "150"]
 
-    TAB_ORIGINALS   = ["10", "22", "6700.32", "500932", "1007382", "55.2"]
-    TAB_ROUNDED     = ["<15", "20", "6700.", "501000", "1007000", "55.2"]
+    TAB_ORIGINALS   = ["10",  "22", "6700.32", "500932", "1007382", "55.2"]
+    TAB_ROUNDED     = ["<15", "20", "6700.",   "501000", "1007000", "55.2"]
 
     # First, make sure that each of these get rounded as expected.
     for i in range(len(COMMA_ORIGINALS)):
@@ -79,14 +79,15 @@ def test_process_csv():
     assert read_csv(FNAME_TAB, "\t") == TAB_ORIGINALS
     
     # Run the rounder on both files
+
     assert os.path.exists(DRB_ROUNDER_PY)
-    r = call([sys.executable,DRB_ROUNDER_PY,'--zap',FNAME_COMMA])
+    r = subprocess.call([sys.executable,DRB_ROUNDER_PY,'--zap',FNAME_COMMA])
     assert r==0
     assert read_csv(FNAME_COMMA_ROUNDED, ",") == COMMA_ROUNDED
 
 
     assert os.path.exists(DRB_ROUNDER_PY)
-    r = call([sys.executable,DRB_ROUNDER_PY,'--zap','--tab',FNAME_TAB])
+    r = subprocess.call([sys.executable,DRB_ROUNDER_PY,'--zap','--tab',FNAME_TAB])
     assert r==0
     assert read_csv(FNAME_TAB_ROUNDED,  "\t") == TAB_ROUNDED
 
@@ -145,7 +146,7 @@ def test_process_xlsx():
     wb.save(EXCEL_FN)
 
     # Run the rounder
-    r = call([sys.executable,DRB_ROUNDER_PY,'--zap',EXCEL_FN])
+    r = subprocess.call([sys.executable, DRB_ROUNDER_PY, '--zap', EXCEL_FN])
     assert r==0
 
     # Load Workbook
@@ -192,9 +193,10 @@ def test_process_xlsx():
 
 def test_files():
     """For specific files, run the rounder on them and verify the results."""
-    from subprocess import call,Popen,PIPE
     for (infile,outfile) in INFILES:
         infile_path = os.path.join(WORK_DIR, infile)
         assert os.path.exists(infile_path)
+
         assert os.path.exists(DRB_ROUNDER_PY)
-        res = call([sys.executable,DRB_ROUNDER_PY, '--zap',infile_path])
+        res = subprocess.call([sys.executable,DRB_ROUNDER_PY, '--zap',infile_path])
+

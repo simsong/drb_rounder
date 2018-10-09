@@ -20,18 +20,20 @@ import os
 import os.path
 import re
 import sys
+import math
 sigfig_re = re.compile("([0-9.]+)")
 
 ALERT_DIGITS = 5                # alert if this many digits or more
 ALERT_VALUES = 10               # alert on this many values
 
 def colname(col):
-    assert 0<=col<=26+26*26     # only handles 1 and 2 character cols. Col 0 is 'A'
+    assert 1<=col<=26+26*26     # only handles 1 and 2 character cols. Col 1 is 'A'
 
-    if col<26:
-        return chr( ord("A") + col)
-    r1 = (col-26) // 26
-    r2 = (col-26) % 26
+    if col<=26:
+        return chr( ord("A") + col - 1)
+
+    r1 = int(math.ceil(col/26))-1 # get the 26s
+    r2 = ((col-1) % 26) + 1       # get the units
     return colname(r1) + colname(r2)
 
 

@@ -20,11 +20,17 @@ SPREADSHEET_TXT=os.path.join(WORK2_DIR, os.path.basename(XLSX_PATH)).replace(".x
 
 
 def test_colname():
-    assert colname(0)=="A"
-    assert colname(1)=="B"
-    assert colname(25)=="Z"
-    assert colname(26)=="AA"
-    assert colname(155)=="EZ"
+    assert colname(0+1)=="A"
+    assert colname(0+2)=="B"
+    assert colname(0+10)=="J"
+    assert colname(0+26)=="Z"
+    assert colname(26+1)=="AA"
+    assert colname(26+2)=="AB"
+    assert colname(26+26)=="AZ"
+    assert colname(26+26+1)=="BA"
+    assert colname(26+26+2)=="BB"
+    assert colname(26+26+26)=="BZ"
+    assert colname(26+26+26+1)=="CA"
 
 
 def test_find_sigfigs():

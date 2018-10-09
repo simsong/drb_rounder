@@ -1,11 +1,15 @@
-"""ttable.py:
+#!/usr/bin/env python3
+"""
+tytable.py:
 Module for typesetting tables in ASCII, LaTeX, and HTML.  Perhaps even CSV!
 Also creates LaTeX variables.
 
 Simson Garfinkel, 2010-
 
 This is really bad python. Let me clean it up before you copy it.
-
+ttable is the main typesetting class. It builds an abstract representation of a table and then typesets with output in Text, HTML or LateX. 
+It can do fancy things like add commas to numbers and total columns.
+All of the formatting specifications need to be redone so that they are more flexbile
 """
 
 TEXT  = 'text'
@@ -15,11 +19,14 @@ LONGTABLE='longtable'
 OPTION_TABLE = 'table'
 OPTION_CENTER = 'center'
 
+__version__ = "0.1.0"
 
 #
 # Some basic functions
 #
-
+import sys
+import os
+import traceback
 
 def line_end(mode):
     if mode==TEXT:
@@ -90,13 +97,14 @@ class ttable:
        ttable() - Constructor. 
        .set_title(title) 
        .compute_and_add_col_totals() - adds columns for specified columns / run automatically
-       add_head([row]) to one or more heading rows. 
-       add_data([row]) to append data rows. 
-       add_data(ttable.HR) - add a horizontal line
+       .add_head([row]) to one or more heading rows. 
+       .add_data([row]) to append data rows. 
+       .add_data(ttable.HR) - add a horizontal line
 
        ## Formatting functions:
        set_col_alignment(col,align) - where col=0..maxcols and align=ttable.RIGHT or ttable.LEFT or ttable.CENTER
                                 (center is not implemented yet)
+       set_col_alignments(str)      - sets with a LaTeX-stye format string
        set_col_totals([1,2,3,4]) - compute totals of columns 1,2,3 and 4
 
        ## Outputting
@@ -152,6 +160,20 @@ class ttable:
     def set_footer(self,footer): self.footer = footer
     def set_caption(self,c): self.caption = c
     def set_col_alignment(self,col,align): self.col_alignment[col] = align
+    def set_col_alignmnets(self,fmt):
+        col = 0
+        for ch in fmt:
+            if ch=='r':
+                self.set_col_alignment(col, self.RIGHT)
+                col += 1
+                continue
+            elif ch=='l':
+                self.set_col_alignment(col, self.LEFT)
+                col += 1
+                continue
+            else:
+                raise RuntimeError("Invalid format string '{}' in '{}'".format(fmt,ch))
+                
     def set_col_totals(self,totals): self.col_totals = totals
     def set_col_fmt(self,col,fmt):
         """Set the formatting for colum COL. Format is specified with a Python format string.
@@ -306,20 +328,30 @@ class ttable:
             self.col_formatted_widths.append(self.col_formatted_width(i))
         return self.col_formatted_widths
 
-    def should_omit_row(self,r):
+    def should_omit_row(self,row):
         for (a,b) in self.omit_row:
-            if r[a]==b: return True
+            if row[a]==b: return True
         return False
 
     def compute_and_add_col_totals(self):
         " Add totals for the specified cols"
         self.cols = self.ncols()
         totals = [0] * self.cols
-        for r in self.data:
-            if r==self.HR or self.should_omit_row(r):
-                continue
-            for col in self.col_totals:
-                totals[col] += r[col]
+        try:
+            for r in self.data:
+                if self.should_omit_row(r):
+                    continue
+                if r==self.HR:
+                    continue        # can't total HRs
+                for col in self.col_totals:
+                    if r[col]=='': continue
+                    totals[col] += r[col]
+        except (ValueError,TypeError) as e:
+            print("*** Table cannot be totaled",file=sys.stderr)
+            for row in self.data:
+                print(row.data,file=sys.stderr)
+            traceback.print_tb()
+            return
         row = ["Total"]
         for col in range(1,self.cols):
             if col in self.col_totals:
@@ -350,11 +382,13 @@ class ttable:
         """ Returns the typset output of the entire table. Builds it up in """
 
         if len(self.data)==0:
-            raise RuntimeError("typeset: no data")
+            print("typeset: no rows")
+            return ""
 
         self.set_mode(mode)
         if option:
             self.add_option(option)
+            print("add option",option)
         self.cols = self.ncols() # cache
         if self.cols == 0:
             print("typeset: no data")
@@ -423,7 +457,6 @@ class ttable:
         if self.mode==HTML:
             self.html_delim = 'td'
 
-
         for row in self.data:
 
             # See if we should omit this row
@@ -436,7 +469,6 @@ class ttable:
                 continue
 
             ret.append(self.typeset_row(row))
-
 
         if self.mode==LATEX:
             if LONGTABLE not in self.options:

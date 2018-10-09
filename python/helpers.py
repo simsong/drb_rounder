@@ -14,7 +14,7 @@ WINDOWS_ERROR="Automated conversion only works on Windows machines. Please manua
 ### String manipulation code
 ################################################################
 # This regular expression matches for any legitimate integer or float which may
-# or may not contain commas
+# or may not contain commas. It does not match negative numbers or scientific notation.
 number_re = re.compile(r"(([.]\d+)|((\d{1,3}(,\d{3})+)|(\d+))([.]\d*)?)")
 def find_next_number(line, pos=0):
     """
@@ -26,6 +26,18 @@ def find_next_number(line, pos=0):
         span = m.span()
         return (span[0]+pos,span[1]+pos)
 
+number2_re = re.compile(r"(-?([.]\d+)|((\d{1,3}(,\d{3})+)|(\d+))([.]\d*)?([eE][-+]?\d+)?)")
+def extract_number(line):
+    """
+    Extract the number from the line, if there is any, removing commas
+    """
+    m = number2_re.search(line)
+    if m:
+        number = m.group(1).replace(",","")
+        return number
+    return None
+        
+        
 def numbers_in_line(line):
     """ Returns an array with all of the numbers in the line """
     ret = []
@@ -95,17 +107,6 @@ def remove_trailing_zero(x):
 ################################################################
 ### File Manipulation Code
 ################################################################
-def safe_open(filename, mode, return_none=False, zap=False):
-    """Like open, but if filename exists and mode is 'w', produce an error"""
-    print("safe_open",filename,os.path.exists(filename))
-    if ('w' in mode) and (os.path.exists(filename)) and (not zap):
-        rounder_logger.error("ABORT: Output file exists '{}'. Please delete "
-                "or rename the file and restart the program".format(filename))
-        if return_none:
-            return None
-        sys.exit(1)
-    return open(filename, mode)
-
 
 def convert_to_xlsx(fname):
     """
@@ -118,14 +119,14 @@ def convert_to_xlsx(fname):
     try:
         import win32com.client as win32
     except ImportError:
-        rounder_logger.error("ABORT: Program is failing to convert spreadsheet to xlsx version spreadsheet. " + WINDOWS_ERROR)
+        logging.error("ABORT: Program is failing to convert spreadsheet to xlsx version spreadsheet. " + WINDOWS_ERROR)
         sys.exit(1)
 
     # Only to be used for .ods and .xlsx files
     (base, ext) = os.path.splitext(fname)
     ext = ext.lower()
     if ext != ".xls" and ext != ".ods":
-        rounder_logger.error("APPLICATION ERROR: Attempting to convert a file "
+        logging.error("APPLICATION ERROR: Attempting to convert a file "
                             "{} to xlsx which shouldn't be converted to xlsx"
                             .format(fname))
 
@@ -151,7 +152,7 @@ def convert_word_to_txt(fname):
     try:
         import win32com.client as win32
     except ImportError:
-        rounder_logger.error("ABORT: Program is failing to the document to a .txt file. " + WINDOWS_ERROR)
+        logging.error("ABORT: Program is failing to the document to a .txt file. " + WINDOWS_ERROR)
         sys.exit(1)
 
     fname = os.path.abspath(fname)  # Uses Windows style file path
@@ -191,7 +192,7 @@ def check_for_excel_formulas(fname):
         try:
             wb.save(new_fname)
         except PermissionError:
-            rounder_logger.error("ABORT: Could not save. Please close "
+            logging.error("ABORT: Could not save. Please close "
                                     "_notrounded spreadsheet")
             sys.exit(1)
 
@@ -242,7 +243,4 @@ def round4_decimal(d):
     """Similarly rounds half even with precision of 4 but for decimals"""
     return int(round4_float(d))
 
-
-if __name__=="__main__":
-    """ This function will always be used for debugging purposes """
 

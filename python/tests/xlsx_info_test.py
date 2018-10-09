@@ -20,11 +20,17 @@ SPREADSHEET_TXT=os.path.join(WORK2_DIR, os.path.basename(XLSX_PATH)).replace(".x
 
 
 def test_colname():
-    assert colname(0)=="A"
-    assert colname(1)=="B"
-    assert colname(25)=="Z"
-    assert colname(26)=="AA"
-    assert colname(155)=="EZ"
+    assert colname(0+1)=="A"
+    assert colname(0+2)=="B"
+    assert colname(0+10)=="J"
+    assert colname(0+26)=="Z"
+    assert colname(26+1)=="AA"
+    assert colname(26+2)=="AB"
+    assert colname(26+26)=="AZ"
+    assert colname(26+26+1)=="BA"
+    assert colname(26+26+2)=="BB"
+    assert colname(26+26+26)=="BZ"
+    assert colname(26+26+26+1)=="CA"
 
 def test_find_sigfigs():
     assert SigFigStats.find_sigfigs(0) == 0
@@ -57,10 +63,10 @@ def test_analyze_xlsx():
     print("==>",SPREADSHEET_TEX, SPREADSHEET_TXT)
     with open(SPREADSHEET_TEX,"w") as f:
         f.write("\\documentclass{article}\\begin{document}\n")
-        f.write( analyze_xlsx( filename=SPREADSHEET_XLSX, mode=LATEX))
+        f.write( analyze_file( filename=SPREADSHEET_XLSX, mode=LATEX))
         f.write("\\end{document}\n")
     with open(SPREADSHEET_TXT,"w") as f:
-        f.write( analyze_xlsx( filename=SPREADSHEET_XLSX, mode=TEXT))
+        f.write( analyze_file( filename=SPREADSHEET_XLSX, mode=TEXT))
 
     run_latex(SPREADSHEET_TEX, repeat=1)
 

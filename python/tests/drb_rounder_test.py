@@ -7,10 +7,19 @@ import shutil
 import subprocess
 #
 # Common tests for the DRB_ROUNDER
-
+#
 
 from common import *
-from drb_rounder import *  # pylint: disable=W0614
+
+sys.path.append( os.path.join(os.path.dirname(__file__),".."))
+
+from number import Number
+
+
+DRB_ROUNDER_PY= os.path.join(os.path.dirname(__file__),"../drb_rounder.py")
+INFILES=[ ("concentration_stats.xlsx","concentration_stats_rounded.xlsx") ] 
+
+
 
 DRB_ROUNDER_PY = os.path.join( os.path.dirname(__file__), "../drb_rounder.py")
 
@@ -31,10 +40,20 @@ def test_process_csv():
     FNAME_COMMA_ROUNDED = os.path.join(WORK_DIR, "test_comma_rounded.csv")
     FNAME_TAB_ROUNDED   = os.path.join(WORK_DIR, "test_tab_rounded.csv")
     COMMA_ORIGINALS = ["41", "74.0", "170.1111111", "142", "689", "16612.832", "32.6", "7003200", "15", "10032", "0.5", "167"]
-    COMMA_ROUNDED   = ["40", "74.0", "170.1", "150", "700", "16610.", "32.6", "7003000", "20", "10000", "0.5", "150"]
+    COMMA_ROUNDED   = ["40", "74.0", "170.1",       "150", "700", "16610.",    "32.6", "7003000", "20", "10000", "0.5", "150"]
 
     TAB_ORIGINALS   = ["10",  "22", "6700.32", "500932", "1007382", "55.2"]
     TAB_ROUNDED     = ["<15", "20", "6700.",   "501000", "1007000", "55.2"]
+
+    # First, make sure that each of these get rounded as expected.
+    for i in range(len(COMMA_ORIGINALS)):
+        n = Number( COMMA_ORIGINALS[i] )
+        assert n.round().strip() == COMMA_ROUNDED[i].strip()
+
+    for i in range(len(TAB_ORIGINALS)):
+        n = Number( TAB_ORIGINALS[i] )
+        assert n.round().strip() == TAB_ROUNDED[i].strip()
+
 
     prep_workdir()
 
@@ -43,11 +62,14 @@ def test_process_csv():
         Place all the digits inside a csv file into a list
         """
         result = []
+        print("reading: ",fname)
         with open( fname,  "rU") as infile:
             for line in infile:
+                print(line.strip())
                 fields = line.split(delimiter)
                 for field in fields:
-                    new_field = ''.join(i for i in field if i.isdigit() or i=='.' or i=='<')  # strip everything but digits and periods and <
+                    # strip everything but digits and periods and <
+                    new_field = ''.join(i for i in field if i.isdigit() or i=='.' or i=='<')  
                     if new_field != '':
                         result.append(new_field)
         return result
@@ -56,20 +78,17 @@ def test_process_csv():
     assert read_csv(FNAME_COMMA, ",") == COMMA_ORIGINALS
     assert read_csv(FNAME_TAB, "\t") == TAB_ORIGINALS
     
-    # Make sure rounded files are deleted
-    for fn in [FNAME_COMMA_ROUNDED, FNAME_TAB_ROUNDED]:
-        if os.path.exists(fn):
-            os.unlink(fn)
-
     # Run the rounder on both files
-    r = subprocess.call([sys.executable, DRB_ROUNDER_PY, FNAME_COMMA])
+
+    assert os.path.exists(DRB_ROUNDER_PY)
+    r = subprocess.call([sys.executable,DRB_ROUNDER_PY,'--zap',FNAME_COMMA])
     assert r==0
     assert read_csv(FNAME_COMMA_ROUNDED, ",") == COMMA_ROUNDED
 
-    r = subprocess.call([sys.executable, DRB_ROUNDER_PY, FNAME_TAB])
-    assert r==0
 
-    # Make sure the output of both .csv files are what we expect
+    assert os.path.exists(DRB_ROUNDER_PY)
+    r = subprocess.call([sys.executable,DRB_ROUNDER_PY,'--zap','--tab',FNAME_TAB])
+    assert r==0
     assert read_csv(FNAME_TAB_ROUNDED,  "\t") == TAB_ROUNDED
 
 
@@ -127,7 +146,7 @@ def test_process_xlsx():
     wb.save(EXCEL_FN)
 
     # Run the rounder
-    r = subprocess.call([sys.executable, DRB_ROUNDER_PY, EXCEL_FN])
+    r = subprocess.call([sys.executable, DRB_ROUNDER_PY, '--zap', EXCEL_FN])
     assert r==0
 
     # Load Workbook
@@ -170,14 +189,14 @@ def test_process_xlsx():
     assert ws['A2'].comment == COMMENT_INTEGER
     assert ws['C2'].comment == COMMENT_FLOAT
 
-    wb.save(ROUNDED_EXCEL_FN)
 
-
-INFILES=[ ("concentration_stats.xlsx","concentration_stats_rounded.xlsx") ] 
 
 def test_files():
     """For specific files, run the rounder on them and verify the results."""
     for (infile,outfile) in INFILES:
         infile_path = os.path.join(WORK_DIR, infile)
         assert os.path.exists(infile_path)
-        res = subprocess.call([sys.executable,DRB_ROUNDER, infile_path])
+
+        assert os.path.exists(DRB_ROUNDER_PY)
+        res = subprocess.call([sys.executable,DRB_ROUNDER_PY, '--zap',infile_path])
+

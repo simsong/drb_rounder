@@ -57,14 +57,14 @@ def test_reconstruct():
     """
     # 6 current test cases
     original           = ["1234", "123,456", "(0.3456)", "(.12345678)", "/123.4567/", "1.234+e2"]
-    original_cleaned   = ["1234", "123456", "0.3456", ".12345678", "123.4567", "123.4"]
-    rounded_cleaned    = ["1200", "123000", "0.3456", "0.1235", "123.5", "1.234E+02"]
+    original_cleaned   = ["1234", "123456",  "0.3456",   ".12345678",   "123.4567",   "123.4"]
+    rounded_cleaned    = ["1200", "123000",  "0.3456",   "0.1235",      "123.5",      "1.234E+02"]
     rounded            = ["1200", "123,000", "(0.3456)", "(0.1235)   ", "/123.5/   ", "1.234E+02"]
-    leading_text       = ["", "", "(", "(", "/", ""]
-    trailing_text      = ["", "", ")", ")", "/", ""]
-    has_commas         = [False, True, False, False, False, False]
+    leading_text       = ["",     "",        "(",        "(",           "/",          ""]
+    trailing_text      = ["",     "",        ")",        ")",           "/",          ""]
+    has_commas         = [False,  True,      False,      False,         False,        False]
     method             = [COUNTS_METHOD, COUNTS_METHOD, ROUND4_METHOD, ROUND4_METHOD, ROUND4_METHOD, ROUND4_METHOD]
-    in_scientific_form = [False, False, False, False, False, True]
+    in_scientific_form = [False,  False,     False,      False,         False,        True]
 
     for i in range(len(original)):
         ri = dict(rounding_info)

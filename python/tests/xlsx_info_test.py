@@ -19,6 +19,20 @@ SPREADSHEET_TEX=os.path.join(WORK2_DIR, os.path.basename(XLSX_PATH)).replace(".x
 SPREADSHEET_TXT=os.path.join(WORK2_DIR, os.path.basename(XLSX_PATH)).replace(".xlsx",".txt")
 
 
+def test_colname():
+    assert colname(0+1)=="A"
+    assert colname(0+2)=="B"
+    assert colname(0+10)=="J"
+    assert colname(0+26)=="Z"
+    assert colname(26+1)=="AA"
+    assert colname(26+2)=="AB"
+    assert colname(26+26)=="AZ"
+    assert colname(26+26+1)=="BA"
+    assert colname(26+26+2)=="BB"
+    assert colname(26+26+26)=="BZ"
+    assert colname(26+26+26+1)=="CA"
+
+
 def test_find_sigfigs():
     assert SigFigStats.find_sigfigs(0) == 0
     assert SigFigStats.find_sigfigs(1) == 1
@@ -35,6 +49,10 @@ def test_find_sigfigs():
     assert SigFigStats.find_sigfigs("12.3") == 3
     assert SigFigStats.find_sigfigs("123.") == 3
 
+
+def test_improperly_rounded():
+    assert SigFigStats.improperly_rounded("1234")==False
+    assert SigFigStats.improperly_rounded("1234.5678")==True
 
 def test_analyze_xlsx():
     """ This just test to make sure that the LaTeX file created can be processed."""

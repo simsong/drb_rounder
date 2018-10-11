@@ -174,7 +174,7 @@ def load_csv_workbook(*,filename,read_only=True):
         
 
 
-def analyze_file(*,filename,mode=TEXT):
+def analyze_file(*,filename,mode=TEXT,verbose=False):
     """Analyze the named excel spreadsheet and return a string in the specified format."""
     NL = tytable.line_end(mode)
     ret = [NL]                   # an array of strings to be joined and returned
@@ -203,7 +203,8 @@ def analyze_file(*,filename,mode=TEXT):
     
     ret_worksheets = []
     for ws in wb.worksheets:
-        print(f"  Analyzing {os.path.basename(filename)} worksheet {ws.title}")
+        if verbose:
+            print(f"  Analyzing {os.path.basename(filename)} worksheet {ws.title}")
         sf_ws = SigFigStats()              # for this worksheet
         
         empty_cells = 0

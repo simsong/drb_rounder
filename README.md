@@ -106,7 +106,7 @@ will contain all of the rounded values.
 ## Running the DRB Rounder without an installation of Python
 We've packaged all of the source code and its dependencies so that you don't
 need an installation of python to run the rounder. NOTE: the executable is
-located in CDAR's shared drive under M:\Users\Thomas
+located in CED's shared drive under M:\Users\Thomas
 
 To run the executable, simply enter the following from the project's root 
 directory:

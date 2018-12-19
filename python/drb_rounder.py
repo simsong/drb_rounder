@@ -258,7 +258,7 @@ class DRBRounder:
         fname_rounded = name + "_rounded" + ext
         fname_before = name + "_0.html"
         fname_after = name + "_1.html"
-        if not args.overwrite:
+        if not self.overwrite:
             abort = False
             for fn in [fname_rounded,fname_before,fname_after]:
                 if exists_notempty(fn):
@@ -373,7 +373,8 @@ if __name__=="__main__":
     parser.add_argument("files", type=str, nargs="+", help="File[s] to round")
     parser.add_argument("--tab",    action="store_true", help="CSV is tab delimited")
     parser.add_argument("--highlight", action="store_true", help="Do not round spreadsheet values, only highlight")
-    parser.add_argument("--log", help="Invoke logfile rounder. This is the default for files ending in {}"
+    parser.add_argument("--log", action='store_true',
+                        help="Invoke logfile rounder. This is the default for files ending in {}"
                         .format(" ".join(DRBRounder.LOGFILE_ROUNDER_EXTENSIONS)))
     parser.add_argument("--counts", action='store_true', help="Apply rounding rules for small counts: 0-7 rounds to 4")
     parser.add_argument("--zap",    action='store_true', help="Overwrite output files")

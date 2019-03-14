@@ -32,7 +32,6 @@ def test_colname():
     assert colname(26+26+26)=="BZ"
     assert colname(26+26+26+1)=="CA"
 
-
 def test_find_sigfigs():
     assert SigFigStats.find_sigfigs(0) == 0
     assert SigFigStats.find_sigfigs(1) == 1

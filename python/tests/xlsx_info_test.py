@@ -8,7 +8,7 @@ from common import *
 
 from latex_tools import run_latex
 from xlsx_info import *
-from tytable import HTML, TEXT, LATEX
+import tytable 
 
 import subprocess
 import shutil
@@ -64,10 +64,10 @@ def test_analyze_xlsx():
     print("==>",SPREADSHEET_TEX, SPREADSHEET_TXT)
     with open(SPREADSHEET_TEX,"w") as f:
         f.write("\\documentclass{article}\\begin{document}\n")
-        f.write( analyze_file( filename=SPREADSHEET_XLSX, mode=LATEX))
+        f.write( analyze_file( filename=SPREADSHEET_XLSX, mode=tytable.ttable.LATEX_MODE))
         f.write("\\end{document}\n")
     with open(SPREADSHEET_TXT,"w") as f:
-        f.write( analyze_file( filename=SPREADSHEET_XLSX, mode=TEXT))
+        f.write( analyze_file( filename=SPREADSHEET_XLSX, mode=tytable.ttable.TEXT_MODE))
 
     run_latex(SPREADSHEET_TEX, repeat=1)
 

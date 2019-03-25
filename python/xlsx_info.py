@@ -12,7 +12,7 @@ from collections import defaultdict
 import zipfile
 import tytable
 from helpers import extract_number
-from tytable import ttable, HTML, TEXT, LATEX
+from tytable import ttable
 
 from latex_tools import latex_escape, textbf, nl
 
@@ -177,13 +177,13 @@ def load_csv_workbook(*,filename,read_only=True):
         
 
 
-def analyze_file(*,filename,mode=TEXT,verbose=False):
+def analyze_file(*,filename,mode=ttable.TEXT,verbose=False):
     """Analyze the named excel spreadsheet and return a string in the specified format."""
     NL = tytable.line_end(mode)
     ret = [NL]                   # an array of strings to be joined and returned
-    if mode==TEXT:
+    if mode==ttable.TEXT:
         ret += [filename,'\n',"="*len(filename),NL]
-    elif mode==LATEX:
+    elif mode==ttable.LATEX:
         ret += [textbf(latex_escape(filename+":")),NL]
         
     if filename.lower().endswith(".csv"):
@@ -268,9 +268,9 @@ if __name__=="__main__":
         args.text = True
 
     if args.text:
-        print(analyze_file(filename=args.file,mode=TEXT))
+        print(analyze_file(filename=args.file,mode=ttable.TEXT))
         print("")
 
     if args.latex:
-        print(analyze_file(filename=args.file,mode=LATEX))
+        print(analyze_file(filename=args.file,mode=ttable.LATEX))
         print("")

@@ -63,7 +63,7 @@ def test_process_csv():
         """
         result = []
         print("reading: ",fname)
-        with open( fname,  "rU") as infile:
+        with open( fname,  "r") as infile:
             for line in infile:
                 print(line.strip())
                 fields = line.split(delimiter)

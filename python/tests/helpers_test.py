@@ -183,15 +183,15 @@ def test_check_for_excel_formulas():
 
     # Make sure each sheet has formulas where expected
     wb = load_workbook( os.path.join(WORK_DIR, NOT_ROUNDED_TEST_FN))
-    ws = wb.get_sheet_by_name("Sheet2")
+    ws = wb["Sheet2"]
     assert str(ws["H12"].value)[0] == "="  # this symbol means it is a formula
     assert ws["H12"].fill == FILL_RED
 
-    ws = wb.get_sheet_by_name("Sheet3")
+    ws = wb["Sheet3"]
     assert str(ws["G4"].value)[0] == "="
     assert ws["G4"].fill == FILL_RED
 
-    ws = wb.get_sheet_by_name("Sheet4")
+    ws = wb["Sheet4"]
     assert str(ws["G5"].value)[0] == "="
     assert ws["G5"].fill == FILL_RED
 

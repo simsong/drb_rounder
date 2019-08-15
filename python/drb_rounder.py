@@ -200,7 +200,7 @@ class DRBRounder:
         values_seen = 0
         values_rounded = 0
         for sheetname in wb.sheetnames:
-            sheet = wb.get_sheet_by_name(sheetname)
+            sheet = wb[sheetname]
 
             # reads each row left to right, then each row, top to bottom
             for cell in sheet.get_cell_collection():  

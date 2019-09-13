@@ -6,7 +6,7 @@ The US Census Bureau Disclosure Review Board has adopted a set of
 interium data release rules that require all statistics produced from
 confidential data sources to be "rounded" to a reduced level of
 prevision.  These rules provide some protection against disclosure of
-information tracable to individuals, but do not provide privacy
+information traceable to individuals, but do not provide privacy
 protection that is formally provable. The rounding rules are an
 interim solution for privacy protection, but the plan is to replace
 them with a system that is formally private at some point in the
@@ -68,7 +68,7 @@ avoidance officer (DAO) or the DRB.
 
 The program is designed to be easy to use. Specifically:
 
-1. Input is accpeted in a wide variety of formats.
+1. Input is accepted in a wide variety of formats.
 2. Data output is in the same format as the input.
 3. In addition to the data output, the program produces a report of what numbers were rounded and which were left as-is.
 4. The program can be imported as a module in other python programs, allowing the rules to be applied directly by the researcher in another Python program.
@@ -112,13 +112,13 @@ easily toggle between the two views:
 
 If you are rounding a delimited data file (for example, a comma-separated values file), the rounder will do a better job if you tell it of the file format.
 
-If you are using a CSV file, the rounder will infer that the file is comma-separated from the file xtension:
+If you are using a CSV file, the rounder will infer that the file is comma-separated from the file extension:
 
 ```sh
 python3 drb_rounder.py filename.csv
 ```
 
-However, if your CSV file is a tab-separated file, be sure to use the `--tab` command-line option to tell the roudner to adjust its behavior:
+However, if your CSV file is a tab-separated file, be sure to use the `--tab` command-line option to tell the rounder to adjust its behavior:
 
 ```sh
 python3 drb_rounder.py filename.csv --tab

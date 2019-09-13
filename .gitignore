@@ -1,8 +1,8 @@
-__pycache__
 *~
 .DS_Store
 .cache
-test_input_?.html
 .pytest_cache
-rounder.log
+__pycache__
 rounded_values.log
+rounder.log
+test_input_?.html

@@ -1,15 +1,23 @@
-# Using the DRB Rounder 
-The DRB Rounder is a python3 program that implements the rounding rules for the
-U.S. Census Bureau's Disclosure Review Board. These rules provide some
-protection against disclosure of information tracable to individuals, but do not
-provide privacy protection that is formally provable. The rounding rules are an
-interim solution for privacy protection, but the plan is to replace them with a
-system that is formally private at some point in the future.
+# DRB Rounding Tools
+Simson L. Garfinkel, US Census Bureau
+September 2019
 
-The DRB Rounder currently implements the following features:
-* Identifies numbers with no decimal point as integers, and numbers that have a
-decimal point as floating point numbers.
-* Applies the DRB rules for counts to integers. Specifically:
+The US Census Bureau Disclosure Review Board has adopted a set of
+interium data release rules that require all statistics produced from
+confidential data sources to be "rounded" to a reduced level of
+prevision.  These rules provide some protection against disclosure of
+information tracable to individuals, but do not provide privacy
+protection that is formally provable. The rounding rules are an
+interim solution for privacy protection, but the plan is to replace
+them with a system that is formally private at some point in the
+future.
+
+## Rounding Rules
+
+There are two DRB rounding rules:
+
+For __counts__:
+
   * If N is less than 15, report N<15
   * If N is between 15 and 99, round to the nearest 10
   * If N is between 100-999, round to the nearest 50
@@ -17,32 +25,79 @@ decimal point as floating point numbers.
   * If N is between 10000-99999, round to the nearest 500
   * If N is between 100000-999999, round to the nearest 1,000
   * If N is 1000000 or more, round to four significant digits
-* Applies the "round to four decimal places" rule to floating point numbers.
-  * Implements the IEEE floating point rounding rules with the "round half even"
-option when rounding. This means that 1000.5 rounds to 1000 while 1001.5 rounds
-to 1002.
+
+For all numbers (both integer and floating point):
+
+  * All values must be rounded to a maximum of four significant
+  figures. (e.g. 1.234 x 10**n).
+
+Note that rounding should implement the (IEEE floating point rounding
+rules)[https://en.wikipedia.org/wiki/IEEE_754#Rounding_rules] with the
+"round half even" option when rounding. This means that 1000.5 rounds
+to 1000 while 1001.5 rounds to 1002.
+
+## Software in this Repo
+This git repo contains software that have been created that implement the
+rouding rules. These tools include:
+
+* python/drb_rounder.py --- A Python program that applies both the
+  rules for counts and regarding the number of significant figures to
+  input files that are in CSV or XLSX format.
+
+* sas/rounding_counts.sas --- A SAS procedure for applying the
+  generalization to counts.
+
+* sas/rounding_params.sas --- A SAS procedure for applying the
+  coarsening to parameters (i.e. floating point values).
+
+* stata/rounding_N.do --- A Stata DO file for applying rules for
+  counts.
+
+* stata/rounding_4sigdig.do --- A Stata DO file for applying the rules
+  requiring rounding to 4 significant digits.
+
+# Available Software
+
+## [python] drb_rounder
+
+The `drb_rounder.py` is a python3 program that implements the rounding rules for the
+U.S. Census Bureau's Disclosure Review Board (DRB). This program is the
+primary tool that the DRB makes available to researchers needing to
+apply the rounding rules to a output prior to review by a disclosure
+avoidance officer (DAO) or the DRB.
+
+The program is designed to be easy to use. Specifically:
+
+1. Input is accpeted in a wide variety of formats.
+2. Data output is in the same format as the input.
+3. In addition to the data output, the program produces a report of what numbers were rounded and which were left as-is.
+4. The program can be imported as a module in other python programs, allowing the rules to be applied directly by the researcher in another Python program.
 
 
-## Acceptable Inputs
+## Input formats
+
+The `drb_rounder.py` accepts input in many formats:
+
 * Free Text Input [.txt, .log, .sas, .lst, .tex, .py, .r]
 * Comma / Tab Separated Values [.csv, .tsv]
 * Spreadsheets [.xlsx, .xls, .ods]
 * Documents [.docx, .odt]
 
-
 ## Running the DRB Rounder on Free Text Input
-To use the rounder, run the following from the Unix or Windows command line.
-Note that `python3` must be in your path:
+Currently, the rounder is a Python3 program that must be run from the Unix or Windows command line.
+(Note that `python3` must be in your path:)
+
+To run, use this command:
 
 ```sh
-python3 drb_rounder.py filename.log
+python3 drb_rounder.py filename.xxx
 ```
 
-Where `filename.log` is the name of the text file containing numbers to be
+Where `filename.xxx` is the name of the text file containing the results to be
 rounded.
 
 This will produce three output files:
-  * `filename_rounded.log` --- The file with the rounded data
+  * `filename_rounded.xxx` --- The file with the rounded data
   * `filename_0.html` --- An HTML file showing the original data, with
   annotations on the values that require rounding.
   * `filename_1.html`--- An HTML file showing the rounded data, with
@@ -53,24 +108,21 @@ easily toggle between the two views:
 
 <img src='pics/input0.png'> <img src='pics/input1.png'>
 
+## Running the DRB Rounder on a delimited file
 
-## Running the DRB Rounder on a CSV file
-Similar to how it's run on free text input, we can run the following from the
-Unix or Windows command line:
+If you are rounding a delimited data file (for example, a comma-separated values file), the rounder will do a better job if you tell it of the file format.
+
+If you are using a CSV file, the rounder will infer that the file is comma-separated from the file xtension:
 
 ```sh
 python3 drb_rounder.py filename.csv
 ```
 
-If your CSV file is a tab-separated file, be sure to use the --tab flag as
-seen below:
+However, if your CSV file is a tab-separated file, be sure to use the `--tab` command-line option to tell the roudner to adjust its behavior:
 
 ```sh
 python3 drb_rounder.py filename.csv --tab
 ```
-
-This will generate an output file: filename_rounded.csv
-
 
 ## Running the DRB Rounder on an Excel Spreadsheet
 To use the rounder, run the following from the Unix or Windows command line.
@@ -93,7 +145,7 @@ only highlight these cells, pass the highlight flag as shown below.
 
 ```sh
 python3 drb_rounder.py filename.xlsx --highlight
-```
+
 
 These commands will generate a new spreadsheet `filename_rounded.xlsx` which
 will contain all of the rounded values.
@@ -123,33 +175,15 @@ or if you're using command prompt on windows, run
 
 
 ## Reports Generated
-2 log files will be generated in your current working directory (wherever you
+Two log files will be generated in your current working directory (wherever you
 are running the executable or python script).
-  * `rounder.log` is an application log which is a growing file describing
-  successful runs as well as unsuccessful runs and their errors
-  * `rounded_values.log` is a log file which reports what values have been
-  rounded and the values they were rounded to on the previous run of the rounder
+
+1. `rounder.log` is an application log which is a growing file describing successful runs as well as unsuccessful runs and their errors
+
+2. `rounded_values.log` is a log file which reports what values have been rounded and the values they were rounded to on the previous run of the rounder
 
 
-## Creating the Executable for Yourself!
-I used the pyinstaller python package to bundle the source code along with its
-dependencies to be run as an executable. If you don't currently have the package,
-you can install it through [anaconda](https://anaconda.org/conda-forge/pyinstaller)
+## Additional documentation
 
-Once you have pyinstaller downloaded, simply run the pyinstaller command and
-pass in your project's driver program.
-
-```sh
-pyinstaller drb_rounder.py
-```
-
-The executable can be found at `dist/drb_rounder/drb_rounder.exe`
-
-
-# Detached head
-Use this:
-
-```sh
-$ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp 
-```
+You will find additional documentation in the (doc/)[doc/] directory and within the source code.
 

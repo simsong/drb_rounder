@@ -143,7 +143,7 @@ only highlight these cells, pass the highlight flag as shown below.
 
 ```sh
 python3 drb_rounder.py filename.xlsx --highlight
-
+```
 
 These commands will generate a new spreadsheet `filename_rounded.xlsx` which
 will contain all of the rounded values.

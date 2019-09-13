@@ -1,6 +1,6 @@
 # DRB Rounding Tools
-Simson L. Garfinkel, US Census Bureau
-September 2019
+Simson L. Garfinkel, US Census Bureau<br/>
+September 2019<br/>
 
 The US Census Bureau Disclosure Review Board has adopted a set of
 interium data release rules that require all statistics produced from

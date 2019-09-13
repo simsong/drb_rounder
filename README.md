@@ -56,9 +56,7 @@ rouding rules. These tools include:
 * stata/rounding_4sigdig.do --- A Stata DO file for applying the rules
   requiring rounding to 4 significant digits.
 
-# Available Software
-
-## [python] drb_rounder
+# The python drb_rounder
 
 The `drb_rounder.py` is a python3 program that implements the rounding rules for the
 U.S. Census Bureau's Disclosure Review Board (DRB). This program is the

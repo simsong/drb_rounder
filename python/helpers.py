@@ -179,11 +179,13 @@ def check_for_excel_formulas(fname):
 
     wb = load_workbook(fname)  # Open the workbook
     for sheetname in wb.sheetnames:
-        sheet = wb.get_sheet_by_name(sheetname)
-        for cell in sheet.get_cell_collection():  # reads left to right, top to bottom
-            if not str(cell.value) == "" and str(cell.value)[0] == "=":  # this symbol means it is a formula
-                cell.fill = FILL_RED
-                formula_exists = True
+        ws = wb.get_sheet_by_name(sheetname)
+        for row in ws.iter_rows():
+            for cell in row:
+                # check for formula:
+                if not str(cell.value) == "" and str(cell.value)[0] == "=":  
+                    cell.fill = FILL_RED
+                    formula_exists = True
 
     if formula_exists:  # save colored cells to a new file
         (base, ext) = os.path.splitext(fname)

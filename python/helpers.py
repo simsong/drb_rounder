@@ -179,7 +179,7 @@ def check_for_excel_formulas(fname):
 
     wb = load_workbook(fname)  # Open the workbook
     for sheetname in wb.sheetnames:
-        ws = wb.get_sheet_by_name(sheetname)
+        ws = wb[sheetname]
         for row in ws.iter_rows():
             for cell in row:
                 # check for formula:

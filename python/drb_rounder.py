@@ -200,49 +200,49 @@ class DRBRounder:
         values_seen = 0
         values_rounded = 0
         for sheetname in wb.sheetnames:
-            sheet = wb[sheetname]
+            ws = wb[sheetname]
 
-            # reads each row left to right, then each row, top to bottom
-            for cell in sheet.get_cell_collection():  
+            for row in ws.iter_rows():
+                for cell in row:
+                    values_seen += 1
 
-                values_seen += 1
+                    # Windows stores excel flaots as single precision sometimes, 
+                    # which cased a value 0.004237 to be read by Python as 0.0042369999999999994.
+                    # The following code checks to see if a float is stored and, if it is, it is rounded
+                    # to 15 significant figures first. IEEE floating point gives imprecision after 17 digits
+                    if type(cell.value)==float:
+                        value = format(cell.value,'.15') 
+                        num = number.Number(value, method=ROUND4_METHOD)
+                    else:
+                        num = number.Number(str(cell.value))
 
-                # Windows stores excel flaots as single precision sometimes, 
-                # which cased a value 0.004237 to be read by Python as 0.0042369999999999994.
-                # The following code checks to see if a float is stored and, if it is, it is rounded
-                # to 15 significant figures first. IEEE floating point gives imprecision after 17 digits
-                if type(cell.value)==float:
-                    value = format(cell.value,'.15') 
-                    num = number.Number(value, method=ROUND4_METHOD)
-                else:
-                    num = number.Number(str(cell.value))
-
-                num.round()
-                if num.needed_rounding == True:
-                    self.values_logger.info("cell %s!%s%s  %s --> %s",sheetname,cell.column,cell.row,num.original,num.rounded)
-                    if num.method == ROUND4_METHOD:
-                        if not highlight:  # argument passed to only highlight spreadsheet
-                            try:  # Successful typecast if no special characters
-                                cell.value = float(num.rounded)
-                            except ValueError:
-                                cell.value = num.rounded
-                        cell.fill = FILL_ORANGE
-                        if first_float_flag:
-                            cell.comment = COMMENT_FLOAT
-                            first_float_flag = False
-                    elif num.method == COUNTS_METHOD:
-                        if not highlight:  # argument passed to only highlight spreadsheet
-                            if num.rounded == LESS_THAN_15:
-                                cell.value = LESS_THAN_15
-                            else:
+                    num.round()
+                    if num.needed_rounding == True:
+                        self.values_logger.info("cell %s!%s%s  %s --> %s",
+                                                sheetname,cell.column,cell.row,num.original,num.rounded)
+                        if num.method == ROUND4_METHOD:
+                            if not highlight:  # argument passed to only highlight spreadsheet
                                 try:  # Successful typecast if no special characters
-                                    cell.value = int(num.rounded)
+                                    cell.value = float(num.rounded)
                                 except ValueError:
                                     cell.value = num.rounded
-                        cell.fill = FILL_BLUE
-                        if first_integer_flag:
-                            cell.comment = COMMENT_INTEGER
-                            first_integer_flag = False
+                            cell.fill = FILL_ORANGE
+                            if first_float_flag:
+                                cell.comment = COMMENT_FLOAT
+                                first_float_flag = False
+                        elif num.method == COUNTS_METHOD:
+                            if not highlight:  # argument passed to only highlight spreadsheet
+                                if num.rounded == LESS_THAN_15:
+                                    cell.value = LESS_THAN_15
+                                else:
+                                    try:  # Successful typecast if no special characters
+                                        cell.value = int(num.rounded)
+                                    except ValueError:
+                                        cell.value = num.rounded
+                            cell.fill = FILL_BLUE
+                            if first_integer_flag:
+                                cell.comment = COMMENT_INTEGER
+                                first_integer_flag = False
 
         # Save the rounded calculations to a new file
         try:
